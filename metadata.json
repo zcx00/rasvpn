@@ -1,0 +1,6 @@
+{
+  "name": "RAS VPN",
+  "description": "Cascade VPN service with Telegram Mini App, Marzban integration, Xray RU->EU node routing, and subscription generator for Happ, Karing, and V2RayTun.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
