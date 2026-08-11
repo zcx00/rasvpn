@@ -19,7 +19,9 @@ async function startServer() {
 
   app.use(express.json());
 
-  // Memory store for mock state
+  // Memory store for user subscriptions by tgId or default
+  const userSubscriptions = new Map<string, any>();
+
   let currentUser = { ...INITIAL_USER };
   let currentSubscription = { ...INITIAL_SUBSCRIPTION };
   let entryNodes = [...ENTRY_NODES];
@@ -65,13 +67,30 @@ async function startServer() {
         status: 'active',
       };
 
-      currentSubscription = {
-        ...INITIAL_SUBSCRIPTION,
-        userId: currentUser.id,
-        marzbanUsername: username,
-        token: userToken,
-        subscriptionUrl: `https://sub.rasvpna.ru/sub/${userToken}`,
-      };
+      // Check if user already has an active subscription in memory
+      if (!userSubscriptions.has(String(tgId))) {
+        // New user has NO active subscription by default
+        const newSub = {
+          id: `sub_${tgId}`,
+          userId: currentUser.id,
+          marzbanUsername: username,
+          token: userToken,
+          subscriptionUrl: `https://sub.rasvpna.ru/sub/${userToken}`,
+          planId: '',
+          planName: 'Нет активной подписки',
+          startDate: '',
+          expireDate: '',
+          trafficLimitGb: 0,
+          trafficUsedGb: 0,
+          status: 'expired',
+          activeDevicesCount: 0,
+          maxDevices: 5,
+          protocol: 'VLESS + Reality',
+        };
+        userSubscriptions.set(String(tgId), newSub);
+      }
+
+      currentSubscription = userSubscriptions.get(String(tgId));
 
       const customReferral = {
         ...INITIAL_REFERRAL,
@@ -127,6 +146,10 @@ async function startServer() {
       trafficUsedGb: 0,
       status: 'active',
     };
+
+    if (currentUser && currentUser.telegramId) {
+      userSubscriptions.set(String(currentUser.telegramId), currentSubscription);
+    }
 
     res.json({
       success: true,

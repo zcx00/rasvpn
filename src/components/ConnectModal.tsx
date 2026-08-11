@@ -13,18 +13,52 @@ interface ConnectModalProps {
 export const ConnectModal: React.FC<ConnectModalProps> = ({ subscription, isOpen, onClose }) => {
   const [selectedApp, setSelectedApp] = useState<ClientApp>(CLIENT_APPS[0]);
   const [copied, setCopied] = useState(false);
+  const [launching, setLaunching] = useState(false);
   const [tab, setTab] = useState<'quick' | 'qr' | 'instructions'>('quick');
 
   if (!isOpen) return null;
 
   const handleCopy = () => {
-    navigator.clipboard.writeText(subscription.subscriptionUrl);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    if (subscription.subscriptionUrl) {
+      navigator.clipboard.writeText(subscription.subscriptionUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
   };
 
   const getDeepLink = (app: ClientApp) => {
-    return `${app.deepLinkScheme}${encodeURIComponent(subscription.subscriptionUrl)}`;
+    return `${app.deepLinkScheme}${encodeURIComponent(subscription.subscriptionUrl || '')}`;
+  };
+
+  const handleLaunchApp = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (!subscription.subscriptionUrl) {
+      alert('Сначала нужно выбрать тариф и оформить подписку!');
+      return;
+    }
+
+    // 1. Copy URL to clipboard automatically so user has it ready
+    handleCopy();
+    setLaunching(true);
+
+    const deepLink = getDeepLink(selectedApp);
+
+    setTimeout(() => {
+      setLaunching(false);
+    }, 2500);
+
+    // 2. Try launching deep link
+    try {
+      const tgWebApp = window.Telegram?.WebApp as any;
+      if (tgWebApp?.openLink && deepLink.startsWith('https://')) {
+        tgWebApp.openLink(deepLink);
+      } else {
+        // Assign location or open window for deep links (karing://, happ://, v2raytun://)
+        window.location.href = deepLink;
+      }
+    } catch {
+      window.open(deepLink, '_system');
+    }
   };
 
   return (
@@ -160,13 +194,18 @@ export const ConnectModal: React.FC<ConnectModalProps> = ({ subscription, isOpen
 
               {/* Direct Launch Button */}
               <div className="pt-2">
-                <a
-                  href={getDeepLink(selectedApp)}
-                  className="w-full bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold py-3 px-4 rounded-xl flex items-center justify-center gap-2 text-sm shadow-lg shadow-cyan-500/20 transition-all"
+                <button
+                  type="button"
+                  onClick={handleLaunchApp}
+                  className="w-full bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white font-bold py-3.5 px-4 rounded-xl flex items-center justify-center gap-2 text-sm shadow-lg shadow-cyan-500/25 active:scale-[0.98] transition-all cursor-pointer"
                 >
-                  <ExternalLink className="w-4 h-4" />
-                  <span>Открыть и импортировать в {selectedApp.name}</span>
-                </a>
+                  <ExternalLink className="w-4 h-4 shrink-0" />
+                  <span>
+                    {launching
+                      ? `Скопировано! Запуск ${selectedApp.name}...`
+                      : `Открыть и импортировать в ${selectedApp.name}`}
+                  </span>
+                </button>
               </div>
             </div>
           )}

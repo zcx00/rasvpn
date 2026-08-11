@@ -6,12 +6,14 @@ interface CascadeServerListProps {
   cascadeRoutes: CascadeRoute[];
   entryNodes: EntryNode[];
   exitNodes: ExitNode[];
+  onConnectClick?: () => void;
 }
 
 export const CascadeServerList: React.FC<CascadeServerListProps> = ({
   cascadeRoutes,
   entryNodes,
   exitNodes,
+  onConnectClick,
 }) => {
   const [testingPing, setTestingPing] = useState(false);
   const [selectedRouteId, setSelectedRouteId] = useState<string>(cascadeRoutes[0]?.id || '');
@@ -183,23 +185,37 @@ export const CascadeServerList: React.FC<CascadeServerListProps> = ({
                 </div>
               </div>
 
-              {/* Recommended Tags */}
-              {route.recommendedFor && route.recommendedFor.length > 0 && (
-                <div className="flex items-center gap-1.5 mt-2.5 pt-2 border-t border-slate-800/60">
-                  <Sparkles className="w-3 h-3 text-amber-400 shrink-0" />
-                  <span className="text-[10px] text-slate-400 font-medium shrink-0">Для:</span>
-                  <div className="flex flex-wrap gap-1">
-                    {route.recommendedFor.map((tag, idx) => (
-                      <span
-                        key={idx}
-                        className="text-[10px] bg-slate-900 text-slate-300 px-2 py-0.5 rounded-md border border-slate-800"
-                      >
-                        {tag}
-                      </span>
-                    ))}
+              {/* Recommended Tags & Quick Connect Button */}
+              <div className="flex flex-wrap items-center justify-between gap-2 mt-2.5 pt-2 border-t border-slate-800/60">
+                {route.recommendedFor && route.recommendedFor.length > 0 && (
+                  <div className="flex items-center gap-1.5">
+                    <Sparkles className="w-3 h-3 text-amber-400 shrink-0" />
+                    <div className="flex flex-wrap gap-1">
+                      {route.recommendedFor.map((tag, idx) => (
+                        <span
+                          key={idx}
+                          className="text-[10px] bg-slate-900 text-slate-300 px-2 py-0.5 rounded-md border border-slate-800"
+                        >
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
+
+                {onConnectClick && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onConnectClick();
+                    }}
+                    className="ml-auto bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 px-3 py-1 rounded-xl text-xs font-bold flex items-center gap-1 transition-all active:scale-95"
+                  >
+                    <Zap className="w-3.5 h-3.5" />
+                    <span>Подключить</span>
+                  </button>
+                )}
+              </div>
             </div>
           );
         })}

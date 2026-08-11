@@ -38,6 +38,8 @@ declare global {
         ready: () => void;
         expand: () => void;
         enableClosingConfirmation: () => void;
+        openLink?: (url: string) => void;
+        openTelegramLink?: (url: string) => void;
       };
     };
   }
@@ -143,6 +145,7 @@ export default function App() {
         setSubscription(data.subscription);
         showToast(`🎉 ${data.message}`);
         setAppTab('main');
+        setIsConnectModalOpen(true);
       }
     } catch {
       // Local fallback
@@ -150,13 +153,15 @@ export default function App() {
       const expire = new Date(now.getTime() + plan.durationDays * 24 * 60 * 60 * 1000);
       setSubscription(prev => ({
         ...prev,
+        status: 'active',
         planName: `Премиум VPN (${plan.name})`,
         expireDate: expire.toISOString().split('T')[0],
         trafficLimitGb: plan.trafficLimitGb,
         trafficUsedGb: 0,
       }));
-      showToast(`🎉 Подписка на ${plan.name} успешно обновлена!`);
+      showToast(`🎉 Подписка на ${plan.name} успешно оформлена!`);
       setAppTab('main');
+      setIsConnectModalOpen(true);
     }
   };
 
@@ -319,6 +324,7 @@ export default function App() {
                 cascadeRoutes={cascadeRoutes}
                 entryNodes={entryNodes}
                 exitNodes={exitNodes}
+                onConnectClick={() => subscription.status === 'active' && subscription.expireDate ? setIsConnectModalOpen(true) : setAppTab('plans')}
               />
             </div>
           )}
@@ -328,6 +334,7 @@ export default function App() {
               cascadeRoutes={cascadeRoutes}
               entryNodes={entryNodes}
               exitNodes={exitNodes}
+              onConnectClick={() => subscription.status === 'active' && subscription.expireDate ? setIsConnectModalOpen(true) : setAppTab('plans')}
             />
           )}
 
