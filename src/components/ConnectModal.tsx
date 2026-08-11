@@ -14,15 +14,41 @@ export const ConnectModal: React.FC<ConnectModalProps> = ({ subscription, isOpen
   const [selectedApp, setSelectedApp] = useState<ClientApp>(CLIENT_APPS[0]);
   const [copied, setCopied] = useState(false);
   const [launching, setLaunching] = useState(false);
+  const [showCopyNotice, setShowCopyNotice] = useState(false);
   const [tab, setTab] = useState<'quick' | 'qr' | 'instructions'>('quick');
 
   if (!isOpen) return null;
 
+  const copyToClipboardFallback = (text: string) => {
+    try {
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      textarea.style.position = 'fixed';
+      textarea.style.opacity = '0';
+      document.body.appendChild(textarea);
+      textarea.focus();
+      textarea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textarea);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
   const handleCopy = () => {
     if (subscription.subscriptionUrl) {
-      navigator.clipboard.writeText(subscription.subscriptionUrl);
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(subscription.subscriptionUrl).catch(() => {
+          copyToClipboardFallback(subscription.subscriptionUrl);
+        });
+      } else {
+        copyToClipboardFallback(subscription.subscriptionUrl);
+      }
       setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      setShowCopyNotice(true);
+      setTimeout(() => setCopied(false), 3000);
+      setTimeout(() => setShowCopyNotice(false), 6000);
     }
   };
 
@@ -47,13 +73,13 @@ export const ConnectModal: React.FC<ConnectModalProps> = ({ subscription, isOpen
       setLaunching(false);
     }, 2500);
 
-    // 2. Try launching deep link
+    // 2. Try launching deep link or redirecting
     try {
       const tgWebApp = window.Telegram?.WebApp as any;
       if (tgWebApp?.openLink && deepLink.startsWith('https://')) {
         tgWebApp.openLink(deepLink);
       } else {
-        // Assign location or open window for deep links (karing://, happ://, v2raytun://)
+        // Direct deep link launch attempt
         window.location.href = deepLink;
       }
     } catch {
@@ -127,6 +153,18 @@ export const ConnectModal: React.FC<ConnectModalProps> = ({ subscription, isOpen
           {/* TAB 1: QUICK IMPORT & LINK */}
           {tab === 'quick' && (
             <div className="space-y-4">
+              {showCopyNotice && (
+                <div className="bg-cyan-950/80 border border-cyan-500/50 rounded-xl p-3 text-xs text-cyan-200 animate-fade-in shadow-lg space-y-1">
+                  <div className="font-bold flex items-center gap-1.5 text-cyan-300">
+                    <Check className="w-4 h-4 text-emerald-400" />
+                    <span>Ссылка подписки скопирована в буфер обмена!</span>
+                  </div>
+                  <p className="text-[11px] text-slate-300 leading-relaxed">
+                    Если приложение <strong>{selectedApp.name}</strong> не открылось автоматически на вашем телефоне: откройте {selectedApp.name} вручную ➔ нажмите <strong>«+» / «Импорт из буфера»</strong>.
+                  </p>
+                </div>
+              )}
+
               <div>
                 <label className="text-xs font-medium text-slate-400 mb-1.5 block">
                   Ваша персональная подписка (1-Click)

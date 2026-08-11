@@ -11,23 +11,25 @@ export const INITIAL_USER: UserProfile = {
   status: 'active',
 };
 
-export const INITIAL_SUBSCRIPTION: VpnSubscription = {
-  id: 'sub_8839201',
-  userId: 'usr_948201',
-  marzbanUsername: 'ras_alex_849302',
-  token: '7a9d3e1f0b4c8a2e5d9c6b3a1f0e4d2c',
-  subscriptionUrl: 'https://sub.rasvpna.ru/sub/7a9d3e1f0b4c8a2e5d9c6b3a1f0e4d2c',
-  planId: 'plan_standard_3m',
-  planName: 'Премиум VPN (3 Месяца)',
-  startDate: '2026-07-15',
-  expireDate: '2026-10-15',
-  trafficLimitGb: 500,
-  trafficUsedGb: 142.8,
-  status: 'active',
-  activeDevicesCount: 2,
+export const EMPTY_SUBSCRIPTION: VpnSubscription = {
+  id: '',
+  userId: '',
+  marzbanUsername: '',
+  token: '',
+  subscriptionUrl: '',
+  planId: '',
+  planName: 'Подписка не активна',
+  startDate: '',
+  expireDate: '',
+  trafficLimitGb: 0,
+  trafficUsedGb: 0,
+  status: 'expired',
+  activeDevicesCount: 0,
   maxDevices: 5,
   protocol: 'VLESS + Reality',
 };
+
+export const INITIAL_SUBSCRIPTION: VpnSubscription = EMPTY_SUBSCRIPTION;
 
 export const TARIFF_PLANS: TariffPlan[] = [
   {

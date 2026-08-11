@@ -14,6 +14,7 @@ import { SubscriptionCard } from './components/SubscriptionCard';
 import { ConnectModal } from './components/ConnectModal';
 import { CascadeServerList } from './components/CascadeServerList';
 import { TariffsSection } from './components/TariffsSection';
+import { PaymentCheckoutModal } from './components/PaymentCheckoutModal';
 import { ReferralProgram } from './components/ReferralProgram';
 import { AdminPanel } from './components/AdminPanel';
 import { SubscriptionWebPage } from './components/SubscriptionWebPage';
@@ -61,6 +62,8 @@ export default function App() {
 
   // Modals
   const [isConnectModalOpen, setIsConnectModalOpen] = useState(false);
+  const [selectedCheckoutPlan, setSelectedCheckoutPlan] = useState<TariffPlan | null>(null);
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   // Initialize Telegram WebApp & fetch user data
@@ -133,7 +136,13 @@ export default function App() {
     setTimeout(() => setToastMessage(null), 3000);
   };
 
-  const handleSelectPlan = async (plan: TariffPlan, paymentMethod: string) => {
+  const handleOpenCheckout = (plan: TariffPlan) => {
+    setSelectedCheckoutPlan(plan);
+    setIsPaymentModalOpen(true);
+  };
+
+  const handleConfirmPayment = async (plan: TariffPlan, paymentMethod: string) => {
+    setIsPaymentModalOpen(false);
     try {
       const res = await fetch('/api/v1/subscribe', {
         method: 'POST',
@@ -339,7 +348,7 @@ export default function App() {
           )}
 
           {appTab === 'plans' && (
-            <TariffsSection onSelectPlan={handleSelectPlan} />
+            <TariffsSection onSelectPlan={handleOpenCheckout} />
           )}
 
           {appTab === 'referrals' && (
@@ -351,6 +360,14 @@ export default function App() {
             subscription={subscription}
             isOpen={isConnectModalOpen}
             onClose={() => setIsConnectModalOpen(false)}
+          />
+
+          {/* Payment Checkout Modal */}
+          <PaymentCheckoutModal
+            plan={selectedCheckoutPlan}
+            isOpen={isPaymentModalOpen}
+            onClose={() => setIsPaymentModalOpen(false)}
+            onConfirmPayment={handleConfirmPayment}
           />
         </main>
       )}
