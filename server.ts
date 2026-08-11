@@ -33,12 +33,65 @@ async function startServer() {
     res.json({ status: 'ok', time: new Date().toISOString(), service: 'RAS VPN Master Backend' });
   });
 
-  // User Profile & Subscription
+  // User Profile & Subscription (GET & POST)
   app.get('/api/v1/user', (req, res) => {
     res.json({
       user: currentUser,
       subscription: currentSubscription,
       referral: INITIAL_REFERRAL,
+    });
+  });
+
+  app.post('/api/v1/user', (req, res) => {
+    const { telegramUser } = req.body;
+
+    if (telegramUser && telegramUser.id) {
+      const tgId = telegramUser.id;
+      const username = telegramUser.username || `user_${tgId}`;
+      const firstName = telegramUser.first_name || 'Пользователь';
+      const lastName = telegramUser.last_name || '';
+      const photoUrl = telegramUser.photo_url || '';
+
+      const userToken = `ras_tg_${tgId}`;
+
+      currentUser = {
+        id: `tg_${tgId}`,
+        telegramId: tgId,
+        username,
+        firstName,
+        lastName,
+        photoUrl,
+        createdAt: new Date().toISOString().split('T')[0],
+        status: 'active',
+      };
+
+      currentSubscription = {
+        ...INITIAL_SUBSCRIPTION,
+        userId: currentUser.id,
+        marzbanUsername: username,
+        token: userToken,
+        subscriptionUrl: `https://sub.rasvpna.ru/sub/${userToken}`,
+      };
+
+      const customReferral = {
+        ...INITIAL_REFERRAL,
+        referralCode: `REF_${tgId}`,
+        inviteLink: `https://t.me/ras_vpn_bot?start=ref_${tgId}`,
+      };
+
+      return res.json({
+        user: currentUser,
+        subscription: currentSubscription,
+        referral: customReferral,
+        isTelegramNative: true,
+      });
+    }
+
+    res.json({
+      user: currentUser,
+      subscription: currentSubscription,
+      referral: INITIAL_REFERRAL,
+      isTelegramNative: false,
     });
   });
 

@@ -19,6 +19,30 @@ import { AdminPanel } from './components/AdminPanel';
 import { SubscriptionWebPage } from './components/SubscriptionWebPage';
 import { Shield, Server, CreditCard, Gift, Smartphone, Check, Zap, AlertCircle, RefreshCw } from 'lucide-react';
 
+// Telegram WebApp window interface
+declare global {
+  interface Window {
+    Telegram?: {
+      WebApp?: {
+        initData?: string;
+        initDataUnsafe?: {
+          user?: {
+            id: number;
+            first_name: string;
+            last_name?: string;
+            username?: string;
+            language_code?: string;
+            photo_url?: string;
+          };
+        };
+        ready: () => void;
+        expand: () => void;
+        enableClosingConfirmation: () => void;
+      };
+    };
+  }
+}
+
 export default function App() {
   const [activeView, setActiveView] = useState<'app' | 'sub' | 'admin'>('app');
   const [appTab, setAppTab] = useState<'main' | 'servers' | 'plans' | 'referrals'>('main');
@@ -31,22 +55,65 @@ export default function App() {
   const [cascadeRoutes, setCascadeRoutes] = useState<CascadeRoute[]>(CASCADE_ROUTES);
   const [referral, setReferral] = useState<ReferralStat>(INITIAL_REFERRAL);
   const [stats, setStats] = useState<SystemStats>(SYSTEM_STATS);
+  const [isTelegramConnected, setIsTelegramConnected] = useState<boolean>(false);
 
   // Modals
   const [isConnectModalOpen, setIsConnectModalOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  // Fetch initial state from backend API if available
+  // Initialize Telegram WebApp & fetch user data
   useEffect(() => {
-    fetch('/api/v1/user')
+    const tg = window.Telegram?.WebApp;
+    let tgUser = tg?.initDataUnsafe?.user;
+
+    if (tg) {
+      try {
+        tg.ready();
+        tg.expand();
+      } catch (e) {
+        console.log('Telegram WebApp init error', e);
+      }
+    }
+
+    // Try POST to backend with Telegram user info
+    fetch('/api/v1/user', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        telegramUser: tgUser || null,
+        initData: tg?.initData || '',
+      }),
+    })
       .then(res => res.json())
       .then(data => {
         if (data.user) setUser(data.user);
         if (data.subscription) setSubscription(data.subscription);
         if (data.referral) setReferral(data.referral);
+        if (data.isTelegramNative) setIsTelegramConnected(true);
       })
       .catch(() => {
-        // Fallback to local mock state if server is loading
+        // Local fallback if server fails
+        if (tgUser) {
+          setIsTelegramConnected(true);
+          const customUser: UserProfile = {
+            id: `tg_${tgUser.id}`,
+            telegramId: tgUser.id,
+            username: tgUser.username || `id${tgUser.id}`,
+            firstName: tgUser.first_name || 'Пользователь',
+            lastName: tgUser.last_name || '',
+            photoUrl: tgUser.photo_url,
+            createdAt: new Date().toISOString().split('T')[0],
+            status: 'active',
+          };
+          setUser(customUser);
+          setSubscription(prev => ({
+            ...prev,
+            userId: customUser.id,
+            marzbanUsername: customUser.username,
+            token: `ras_tg_${tgUser.id}`,
+            subscriptionUrl: `https://sub.rasvpna.ru/sub/ras_tg_${tgUser.id}`,
+          }));
+        }
       });
 
     fetch('/api/v1/servers')
@@ -160,6 +227,41 @@ export default function App() {
       {/* VIEW 1: TELEGRAM MINI APP (app.rasvpna.ru) */}
       {activeView === 'app' && (
         <main className="max-w-2xl mx-auto px-3 sm:px-4 py-3 sm:py-6 space-y-4 sm:space-y-6 pb-10">
+          {/* User Connection Status Banner */}
+          <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-3 flex items-center justify-between gap-3 text-xs shadow-lg">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-8 h-8 rounded-full bg-cyan-500/20 text-cyan-400 flex items-center justify-center font-bold text-sm shrink-0 border border-cyan-500/30 overflow-hidden">
+                {user.photoUrl ? (
+                  <img src={user.photoUrl} alt={user.username} className="w-full h-full object-cover" />
+                ) : (
+                  user.firstName ? user.firstName[0] : '👤'
+                )}
+              </div>
+              <div className="min-w-0">
+                <div className="font-bold text-white truncate flex items-center gap-1.5">
+                  <span>{user.firstName} {user.lastName}</span>
+                  <span className="text-cyan-400 font-mono text-[11px]">(@{user.username})</span>
+                </div>
+                <div className="text-[10px] text-slate-400 flex items-center gap-1">
+                  {isTelegramConnected ? (
+                    <span className="text-emerald-400 font-semibold flex items-center gap-1">
+                      🟢 Авторизован через Telegram Mini App
+                    </span>
+                  ) : (
+                    <span className="text-amber-400 font-medium">
+                      ℹ️ Демо-профиль (авторизация происходит при открытии в Telegram)
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+            <div className="shrink-0 text-right">
+              <span className="text-[10px] font-mono text-cyan-400 bg-cyan-950/60 px-2.5 py-1 rounded-xl border border-cyan-800/60 block font-semibold">
+                ID: {user.telegramId || '7891234'}
+              </span>
+            </div>
+          </div>
+
           {/* Active Subscription Status Card */}
           <SubscriptionCard
             subscription={subscription}
