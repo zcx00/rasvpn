@@ -274,20 +274,17 @@ export const CLIENT_APPS: ClientApp[] = [
   },
 ];
 
-export const INITIAL_REFERRAL: ReferralStat = {
-  referralCode: 'RAS-849302',
-  totalInvited: 7,
-  activeSubscribers: 4,
-  earnedRubles: 1400,
-  earnedBonusDays: 45,
-  inviteLink: 'https://t.me/RASVPN_Bot?start=ref_RAS849302',
-  history: [
-    { id: '1', username: 'dmitry_m', date: '2026-08-01', reward: '+15 дней VPN' },
-    { id: '2', username: 'elena_k', date: '2026-07-28', reward: '+350 ₽ на баланс' },
-    { id: '3', username: 'sergey_v', date: '2026-07-20', reward: '+15 дней VPN' },
-    { id: '4', username: 'maxim_dev', date: '2026-07-12', reward: '+350 ₽ на баланс' },
-  ],
+export const EMPTY_REFERRAL: ReferralStat = {
+  referralCode: 'REF-NEW',
+  totalInvited: 0,
+  activeSubscribers: 0,
+  earnedRubles: 0,
+  earnedBonusDays: 0,
+  inviteLink: 'https://t.me/ras_vpn_bot?start=ref_new',
+  history: [],
 };
+
+export const INITIAL_REFERRAL: ReferralStat = EMPTY_REFERRAL;
 
 export const SYSTEM_STATS: SystemStats = {
   activeUsers: 1482,

@@ -84,65 +84,15 @@ export const TariffsSection: React.FC<TariffsSectionProps> = ({ onSelectPlan }) 
         })}
       </div>
 
-      {/* Payment Method Selector */}
-      <div className="pt-2 border-t border-slate-800 space-y-3">
-        <div className="text-xs font-semibold text-slate-300">Способ оплаты:</div>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
-          <button
-            onClick={() => setPaymentMethod('card')}
-            className={`p-2.5 rounded-xl border text-center font-medium transition-all ${
-              paymentMethod === 'card'
-                ? 'bg-blue-600/20 border-cyan-400 text-white'
-                : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            💳 Карта РФ
-          </button>
-
-          <button
-            onClick={() => setPaymentMethod('sbp')}
-            className={`p-2.5 rounded-xl border text-center font-medium transition-all ${
-              paymentMethod === 'sbp'
-                ? 'bg-blue-600/20 border-cyan-400 text-white'
-                : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            ⚡ СБП
-          </button>
-
-          <button
-            onClick={() => setPaymentMethod('stars')}
-            className={`p-2.5 rounded-xl border text-center font-medium transition-all ${
-              paymentMethod === 'stars'
-                ? 'bg-blue-600/20 border-cyan-400 text-white'
-                : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            ⭐ Telegram Stars
-          </button>
-
-          <button
-            onClick={() => setPaymentMethod('crypto')}
-            className={`p-2.5 rounded-xl border text-center font-medium transition-all ${
-              paymentMethod === 'crypto'
-                ? 'bg-blue-600/20 border-cyan-400 text-white'
-                : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            🪙 Криптовалюта
-          </button>
-        </div>
-      </div>
-
       {/* Checkout Button */}
       <button
         onClick={handleCheckout}
         disabled={processing}
-        className="w-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-bold py-3.5 px-4 rounded-xl shadow-lg shadow-emerald-600/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2 text-sm"
+        className="w-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-bold py-3.5 px-4 rounded-xl shadow-lg shadow-emerald-600/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2 text-sm mt-4"
       >
         <Lock className="w-4 h-4" />
         <span>
-          {processing ? 'Обработка оплаты...' : `Оплатить ${selectedPlan.priceRub} ₽ (${selectedPlan.name})`}
+          {processing ? 'Обработка...' : `Оплатить ${selectedPlan.priceRub} ₽ (${selectedPlan.name})`}
         </span>
       </button>
     </div>

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { EntryNode, ExitNode, CascadeRoute, SystemStats } from '../types';
 import { generateDockerComposeSnippet } from '../utils/xrayGenerator';
-import { Server, Cpu, Activity, Plus, FileCode, Check, Copy, Shield, Network, RefreshCw, Terminal } from 'lucide-react';
+import { Server, Cpu, Activity, Plus, FileCode, Check, Copy, Shield, Network, RefreshCw, Terminal, CreditCard, Wallet } from 'lucide-react';
 
 interface AdminPanelProps {
   entryNodes: EntryNode[];
@@ -20,7 +20,18 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   onAddNode,
   onAddRoute,
 }) => {
-  const [tab, setTab] = useState<'nodes' | 'routes' | 'xray' | 'docker'>('nodes');
+  const [tab, setTab] = useState<'nodes' | 'routes' | 'xray' | 'docker' | 'payments'>('nodes');
+
+  // Payment Settings State
+  const [cardlinkShopId, setCardlinkShopId] = useState('');
+  const [cardlinkApiKey, setCardlinkApiKey] = useState('');
+  const [cryptoBotToken, setCryptoBotToken] = useState('');
+  const [walletTrc20, setWalletTrc20] = useState('TQn9Y2khEsLJW1ChV3o4e94J84k9L0m1aX');
+  const [walletTon, setWalletTon] = useState('EQD12aX9vK8z_ExampleTonAddressForRASVPN');
+  const [alfaAccount, setAlfaAccount] = useState('40817810505901273664');
+  const [alfaRecipient, setAlfaRecipient] = useState('Баймурзаева Нурьяна Мурадовна');
+  const [isSavingPayment, setIsSavingPayment] = useState(false);
+  const [paymentNotice, setPaymentNotice] = useState<string | null>(null);
 
   // New Node Form State
   const [nodeType, setNodeType] = useState<'entry' | 'exit'>('entry');
@@ -81,6 +92,50 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
       setGeneratedExitJson(data.exitConfigJson);
     } catch (err) {
       console.error(err);
+    }
+  };
+
+  const fetchPaymentSettings = async () => {
+    try {
+      const res = await fetch('/api/v1/payment/settings');
+      const data = await res.json();
+      if (data) {
+        if (data.cardlinkShopId) setCardlinkShopId(data.cardlinkShopId);
+        if (data.walletTrc20) setWalletTrc20(data.walletTrc20);
+        if (data.walletTon) setWalletTon(data.walletTon);
+        if (data.alfaAccount) setAlfaAccount(data.alfaAccount);
+        if (data.alfaRecipient) setAlfaRecipient(data.alfaRecipient);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleSavePaymentSettings = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSavingPayment(true);
+    try {
+      const res = await fetch('/api/v1/admin/payment-settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          cardlinkShopId,
+          cardlinkApiKey,
+          cryptoBotToken,
+          walletTrc20,
+          walletTon,
+          alfaAccount,
+          alfaRecipient,
+        }),
+      });
+      const data = await res.json();
+      setPaymentNotice(data.message || 'Настройки сохранены!');
+      setTimeout(() => setPaymentNotice(null), 3500);
+    } catch {
+      setPaymentNotice('Ошибка при сохранении настроек');
+      setTimeout(() => setPaymentNotice(null), 3000);
+    } finally {
+      setIsSavingPayment(false);
     }
   };
 
@@ -153,6 +208,19 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
         >
           <Terminal className="w-4 h-4" />
           <span>Docker Compose</span>
+        </button>
+
+        <button
+          onClick={() => {
+            setTab('payments');
+            fetchPaymentSettings();
+          }}
+          className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-all ${
+            tab === 'payments' ? 'bg-purple-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-200'
+          }`}
+        >
+          <Wallet className="w-4 h-4 text-emerald-400" />
+          <span>💳 Прием оплаты & Кошельки</span>
         </button>
       </div>
 
@@ -495,6 +563,172 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
               </pre>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* TAB 5: PAYMENT SETTINGS & WALLETS */}
+      {tab === 'payments' && (
+        <div className="bg-slate-900/90 p-5 rounded-2xl border border-slate-800 space-y-5">
+          <div className="flex items-center justify-between">
+            <div>
+              <h4 className="font-bold text-white text-base flex items-center gap-2">
+                <Wallet className="w-5 h-5 text-emerald-400" />
+                <span>Настройка приема платежей & Крипто-кошельков</span>
+              </h4>
+              <p className="text-xs text-slate-400 mt-0.5">
+                Укажите ваши реквизиты и API токены для прямого зачисления денег за подписки на ваш криптокошелек.
+              </p>
+            </div>
+          </div>
+
+          {paymentNotice && (
+            <div className="bg-emerald-950/80 border border-emerald-500/50 rounded-xl p-3 text-xs text-emerald-200 animate-fade-in flex items-center gap-2">
+              <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+              <span>{paymentNotice}</span>
+            </div>
+          )}
+
+          <form onSubmit={handleSavePaymentSettings} className="space-y-4">
+            {/* Cardlink Payment Gateway Integration */}
+            <div className="bg-slate-950 p-4 rounded-xl border border-blue-500/30 space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-white flex items-center gap-1.5">
+                  <span>💳 Платежный эквайринг Cardlink (https://cardlink.link)</span>
+                </label>
+                <a
+                  href="https://cardlink.link"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[11px] text-cyan-400 hover:underline flex items-center gap-1"
+                >
+                  Личный кабинет Cardlink ➔
+                </a>
+              </div>
+              <p className="text-[11px] text-slate-400">
+                Прием банковских карт (РФ, СБП, Visa/Mastercard, Мир, Криптовалюта). Автоматическое перенаправление клиентов на форму оплаты Cardlink.
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                <div>
+                  <label className="text-[11px] text-slate-400 mb-1 block">Cardlink Shop ID (Идентификатор магазина)</label>
+                  <input
+                    type="text"
+                    placeholder="Например: 12948"
+                    value={cardlinkShopId}
+                    onChange={e => setCardlinkShopId(e.target.value)}
+                    className="w-full bg-slate-900 border border-slate-800 rounded-lg p-2.5 text-xs text-white font-mono focus:border-cyan-500 outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="text-[11px] text-slate-400 mb-1 block">Cardlink API Secret Key (Секретный ключ)</label>
+                  <input
+                    type="password"
+                    placeholder="Ваш секретный API ключ Cardlink"
+                    value={cardlinkApiKey}
+                    onChange={e => setCardlinkApiKey(e.target.value)}
+                    className="w-full bg-slate-900 border border-slate-800 rounded-lg p-2.5 text-xs text-white font-mono focus:border-cyan-500 outline-none"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Telegram CryptoBot Token */}
+            <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
+                  <span>🤖 Telegram @CryptoBot API Token (CryptoPay)</span>
+                </label>
+                <a
+                  href="https://t.me/CryptoBot"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[11px] text-cyan-400 hover:underline"
+                >
+                  Получить токен в @CryptoBot ➔
+                </a>
+              </div>
+              <input
+                type="text"
+                placeholder="Например: 104928:AAFd83920193810293810"
+                value={cryptoBotToken}
+                onChange={e => setCryptoBotToken(e.target.value)}
+                className="w-full bg-slate-900 border border-slate-800 rounded-lg p-2.5 text-xs text-white font-mono focus:border-cyan-500 outline-none"
+              />
+              <p className="text-[11px] text-slate-400">
+                Оплата покупателей зачисляется мгновенно на ваш баланс в Telegram @CryptoBot без комиссии сервиса!
+              </p>
+            </div>
+
+            {/* Direct USDT TRC-20 Wallet */}
+            <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2">
+              <label className="text-xs font-bold text-slate-200 block">
+                🪙 Ваш личный USDT TRC-20 Кошелек (Tron Network)
+              </label>
+              <input
+                type="text"
+                placeholder="TQn9Y2khEsLJW1ChV3o4e94J84k9L0m1aX"
+                value={walletTrc20}
+                onChange={e => setWalletTrc20(e.target.value)}
+                className="w-full bg-slate-900 border border-slate-800 rounded-lg p-2.5 text-xs text-cyan-300 font-mono focus:border-cyan-500 outline-none"
+              />
+              <p className="text-[11px] text-slate-400">
+                Сюда будут отправлять прямые переводы пользователи Trust Wallet, OKX, Binance и др.
+              </p>
+            </div>
+
+            {/* Direct TON Wallet */}
+            <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2">
+              <label className="text-xs font-bold text-slate-200 block">
+                💎 Ваш личный TON Кошелек (Tonkeeper / Telegram Wallet)
+              </label>
+              <input
+                type="text"
+                placeholder="EQD12aX9vK8z_ExampleTonAddressForRASVPN"
+                value={walletTon}
+                onChange={e => setWalletTon(e.target.value)}
+                className="w-full bg-slate-900 border border-slate-800 rounded-lg p-2.5 text-xs text-cyan-300 font-mono focus:border-cyan-500 outline-none"
+              />
+            </div>
+
+            {/* Alfa-Bank Requisites */}
+            <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-3">
+              <div className="text-xs font-bold text-slate-200">🏦 Реквизиты Альфа-Банка для рублевых переводов</div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[11px] text-slate-400 mb-1 block">ФИО Получателя</label>
+                  <input
+                    type="text"
+                    value={alfaRecipient}
+                    onChange={e => setAlfaRecipient(e.target.value)}
+                    className="w-full bg-slate-900 border border-slate-800 rounded-lg p-2 text-xs text-white"
+                  />
+                </div>
+                <div>
+                  <label className="text-[11px] text-slate-400 mb-1 block">Номер счёта</label>
+                  <input
+                    type="text"
+                    value={alfaAccount}
+                    onChange={e => setAlfaAccount(e.target.value)}
+                    className="w-full bg-slate-900 border border-slate-800 rounded-lg p-2 text-xs text-cyan-300 font-mono"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={isSavingPayment}
+              className="w-full bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold text-xs py-3 px-4 rounded-xl transition-all shadow-lg shadow-emerald-600/20 flex items-center justify-center gap-2"
+            >
+              {isSavingPayment ? (
+                <span>Сохранение...</span>
+              ) : (
+                <>
+                  <Check className="w-4 h-4" />
+                  <span>Сохранить настройки платежей</span>
+                </>
+              )}
+            </button>
+          </form>
         </div>
       )}
     </div>

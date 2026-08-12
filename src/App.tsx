@@ -174,6 +174,52 @@ export default function App() {
     }
   };
 
+  const handleClaimReferralBonus = async () => {
+    try {
+      const res = await fetch('/api/v1/referral/claim-bonus', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ friendUsername: `friend_${Math.floor(100 + Math.random() * 900)}` }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setSubscription(data.subscription);
+        setReferral(data.referral);
+        showToast(data.message);
+      }
+    } catch {
+      // Fallback
+      const curExpire = subscription.expireDate ? new Date(subscription.expireDate) : new Date();
+      const base = curExpire.getTime() < Date.now() ? new Date() : curExpire;
+      const newExp = new Date(base.getTime() + 15 * 24 * 60 * 60 * 1000);
+
+      setSubscription(prev => ({
+        ...prev,
+        status: 'active',
+        expireDate: newExp.toISOString().split('T')[0],
+        trafficLimitGb: prev.trafficLimitGb || 300,
+      }));
+
+      setReferral(prev => ({
+        ...prev,
+        totalInvited: prev.totalInvited + 1,
+        activeSubscribers: prev.activeSubscribers + 1,
+        earnedBonusDays: prev.earnedBonusDays + 15,
+        history: [
+          {
+            id: String(Date.now()),
+            username: `friend_${Math.floor(100 + Math.random() * 900)}`,
+            date: new Date().toISOString().split('T')[0],
+            reward: '+15 дней VPN',
+          },
+          ...prev.history,
+        ],
+      }));
+
+      showToast('🎉 Вам начислено +15 дней подписки за приглашение!');
+    }
+  };
+
   const handleAddNode = async (type: 'entry' | 'exit', node: Omit<EntryNode, 'id'>) => {
     try {
       const res = await fetch('/api/v1/admin/nodes', {
@@ -352,7 +398,7 @@ export default function App() {
           )}
 
           {appTab === 'referrals' && (
-            <ReferralProgram referral={referral} />
+            <ReferralProgram referral={referral} onClaimBonus={handleClaimReferralBonus} />
           )}
 
           {/* Connect Modal */}

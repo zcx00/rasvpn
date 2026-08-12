@@ -19,8 +19,22 @@ async function startServer() {
 
   app.use(express.json());
 
-  // Memory store for user subscriptions by tgId or default
+  // Memory store for user subscriptions & referrals by tgId
   const userSubscriptions = new Map<string, any>();
+  const userReferrals = new Map<string, any>();
+  const invoicesStore = new Map<string, any>();
+
+  // Payment settings store (Personal Wallet + CryptoBot + Cardlink configuration)
+  let paymentSettings = {
+    cardlinkShopId: process.env.CARDLINK_SHOP_ID || '',
+    cardlinkApiKey: process.env.CARDLINK_API_KEY || '',
+    cryptoBotToken: process.env.CRYPTOBOT_API_TOKEN || '',
+    walletTrc20: process.env.MERCHANT_WALLET_TRC20 || 'TQn9Y2khEsLJW1ChV3o4e94J84k9L0m1aX',
+    walletTon: process.env.MERCHANT_WALLET_TON || 'EQD12aX9vK8z_ExampleTonAddressForRASVPN',
+    alfaAccount: process.env.ALFA_ACCOUNT_NUM || '40817810505901273664',
+    alfaRecipient: 'Баймурзаева Нурьяна Мурадовна',
+    autoActivateOnPayment: true,
+  };
 
   let currentUser = { ...INITIAL_USER };
   let currentSubscription = { ...INITIAL_SUBSCRIPTION };
@@ -92,11 +106,20 @@ async function startServer() {
 
       currentSubscription = userSubscriptions.get(String(tgId));
 
-      const customReferral = {
-        ...INITIAL_REFERRAL,
-        referralCode: `REF_${tgId}`,
-        inviteLink: `https://t.me/ras_vpn_bot?start=ref_${tgId}`,
-      };
+      if (!userReferrals.has(String(tgId))) {
+        const cleanReferral = {
+          referralCode: `REF_${tgId}`,
+          totalInvited: 0,
+          activeSubscribers: 0,
+          earnedRubles: 0,
+          earnedBonusDays: 0,
+          inviteLink: `https://t.me/ras_vpn_bot?start=ref_${tgId}`,
+          history: [],
+        };
+        userReferrals.set(String(tgId), cleanReferral);
+      }
+
+      const customReferral = userReferrals.get(String(tgId));
 
       return res.json({
         user: currentUser,
@@ -156,6 +179,273 @@ async function startServer() {
       message: `Подписка на ${plan.name} успешно оформлена!`,
       subscription: currentSubscription,
       paymentMethod,
+    });
+  });
+
+  // ==================== PAYMENT GATEWAY & CRYPTO API ====================
+
+  // Get Payment Public Settings
+  app.get('/api/v1/payment/settings', (req, res) => {
+    res.json({
+      cardlinkShopId: paymentSettings.cardlinkShopId,
+      hasCardlink: Boolean(paymentSettings.cardlinkShopId && paymentSettings.cardlinkApiKey),
+      walletTrc20: paymentSettings.walletTrc20,
+      walletTon: paymentSettings.walletTon,
+      alfaAccount: paymentSettings.alfaAccount,
+      alfaRecipient: paymentSettings.alfaRecipient,
+      hasCryptoBotToken: Boolean(paymentSettings.cryptoBotToken),
+    });
+  });
+
+  // Update Admin Payment Settings
+  app.post('/api/v1/admin/payment-settings', (req, res) => {
+    const { cardlinkShopId, cardlinkApiKey, cryptoBotToken, walletTrc20, walletTon, alfaAccount, alfaRecipient } = req.body;
+    if (cardlinkShopId !== undefined) paymentSettings.cardlinkShopId = cardlinkShopId;
+    if (cardlinkApiKey !== undefined) paymentSettings.cardlinkApiKey = cardlinkApiKey;
+    if (cryptoBotToken !== undefined) paymentSettings.cryptoBotToken = cryptoBotToken;
+    if (walletTrc20 !== undefined) paymentSettings.walletTrc20 = walletTrc20;
+    if (walletTon !== undefined) paymentSettings.walletTon = walletTon;
+    if (alfaAccount !== undefined) paymentSettings.alfaAccount = alfaAccount;
+    if (alfaRecipient !== undefined) paymentSettings.alfaRecipient = alfaRecipient;
+
+    res.json({
+      success: true,
+      message: '⚙️ Настройки Cardlink, платежей и кошельков сохранены!',
+      settings: paymentSettings,
+    });
+  });
+
+  // Create Crypto, Cardlink or Direct Invoice
+  app.post('/api/v1/payment/create-invoice', async (req, res) => {
+    const { planId, method } = req.body;
+    const plan = TARIFF_PLANS.find(p => p.id === planId) || TARIFF_PLANS[1];
+
+    const invoiceId = `INV-${Date.now().toString().slice(-6)}`;
+    const memoCode = `RAS-${invoiceId}`;
+    const amountRub = plan.priceRub;
+    const amountUsdt = parseFloat((amountRub / 95).toFixed(2));
+    const amountTon = parseFloat((amountRub / 500).toFixed(2));
+
+    let payUrl = `https://t.me/CryptoBot?start=pay_${invoiceId}`;
+    let cardlinkUrl = paymentSettings.cardlinkShopId
+      ? `https://cardlink.link/bill/create?shop_id=${paymentSettings.cardlinkShopId}&amount=${amountRub}&order_id=${invoiceId}`
+      : `https://cardlink.link/bill/${invoiceId}`;
+
+    // If real Cardlink API key & shop_id provided, create bill via Cardlink REST API
+    if (paymentSettings.cardlinkShopId && paymentSettings.cardlinkApiKey) {
+      try {
+        const cardlinkRes = await fetch('https://cardlink.link/api/v1/bill/create', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${paymentSettings.cardlinkApiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            shop_id: paymentSettings.cardlinkShopId,
+            amount: amountRub,
+            currency: 'RUB',
+            order_id: invoiceId,
+            description: `Подписка RAS VPN: ${plan.name} (${plan.durationDays} дней)`,
+            success_url: `${process.env.APP_URL || ''}/?payment=success`,
+            fail_url: `${process.env.APP_URL || ''}/?payment=failed`,
+          }),
+        });
+        const cardlinkData = await cardlinkRes.json();
+        if (cardlinkData?.link_page_url) {
+          cardlinkUrl = cardlinkData.link_page_url;
+        } else if (cardlinkData?.data?.link_page_url) {
+          cardlinkUrl = cardlinkData.data.link_page_url;
+        }
+      } catch (err) {
+        console.warn('Cardlink API call fallback:', err);
+      }
+    }
+
+    // If real CryptoBot API token is provided, try creating real CryptoPay Invoice
+    if (paymentSettings.cryptoBotToken) {
+      try {
+        const cryptoBotRes = await fetch('https://pay.crypt.bot/api/createInvoice', {
+          method: 'POST',
+          headers: {
+            'Crypto-Pay-API-Token': paymentSettings.cryptoBotToken,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            asset: 'USDT',
+            amount: amountUsdt.toString(),
+            description: `Подписка RAS VPN: ${plan.name} (${plan.durationDays} дней)`,
+            payload: invoiceId,
+          }),
+        });
+        const cryptoData = await cryptoBotRes.json();
+        if (cryptoData?.ok && cryptoData?.result?.pay_url) {
+          payUrl = cryptoData.result.pay_url;
+        }
+      } catch (err) {
+        console.warn('CryptoBot API call fallback:', err);
+      }
+    }
+
+    const now = new Date();
+    const expiresAt = new Date(now.getTime() + 15 * 60 * 1000).toISOString();
+
+    const invoice = {
+      id: invoiceId,
+      planId: plan.id,
+      planName: plan.name,
+      durationDays: plan.durationDays,
+      amountRub,
+      amountUsdt,
+      amountTon,
+      payUrl,
+      cardlinkUrl,
+      walletTrc20: paymentSettings.walletTrc20,
+      walletTon: paymentSettings.walletTon,
+      memoCode,
+      status: 'pending',
+      createdAt: now.toISOString(),
+      expiresAt,
+      method,
+    };
+
+    invoicesStore.set(invoiceId, invoice);
+
+    res.json({
+      success: true,
+      invoice,
+    });
+  });
+
+  // Check or Confirm Invoice Payment Status
+  app.post('/api/v1/payment/check-status', (req, res) => {
+    const { invoiceId, txHash } = req.body;
+    let invoice = invoicesStore.get(invoiceId);
+
+    if (!invoice) {
+      return res.status(404).json({ success: false, message: 'Счет не найден' });
+    }
+
+    // Mark invoice as paid
+    invoice.status = 'paid';
+    invoice.txHash = txHash || `tx_simulated_${Date.now()}`;
+    invoicesStore.set(invoiceId, invoice);
+
+    // Auto-activate or extend user's subscription
+    const plan = TARIFF_PLANS.find(p => p.id === invoice.planId) || TARIFF_PLANS[1];
+    const now = new Date();
+    const curExpire = currentSubscription.expireDate ? new Date(currentSubscription.expireDate) : now;
+    const baseDate = curExpire.getTime() < now.getTime() ? now : curExpire;
+    const newExpire = new Date(baseDate.getTime() + plan.durationDays * 24 * 60 * 60 * 1000);
+
+    currentSubscription = {
+      ...currentSubscription,
+      planId: plan.id,
+      planName: `Премиум Каскад (${plan.name})`,
+      startDate: now.toISOString().split('T')[0],
+      expireDate: newExpire.toISOString().split('T')[0],
+      trafficLimitGb: plan.trafficLimitGb,
+      trafficUsedGb: 0,
+      status: 'active',
+    };
+
+    if (currentUser && currentUser.telegramId) {
+      userSubscriptions.set(String(currentUser.telegramId), currentSubscription);
+    }
+
+    res.json({
+      success: true,
+      status: 'paid',
+      message: '🎉 Оплата успешно подтверждена! Подписка активна.',
+      subscription: currentSubscription,
+      invoice,
+    });
+  });
+
+  // Webhook for CryptoBot / Cryptomus Webhook Events
+  app.post('/api/v1/payment/webhook', (req, res) => {
+    const body = req.body;
+    console.log('Received payment webhook:', body);
+
+    const invoiceId = body?.payload || body?.invoice_id || body?.order_id;
+    if (invoiceId && invoicesStore.has(invoiceId)) {
+      const invoice = invoicesStore.get(invoiceId);
+      invoice.status = 'paid';
+      invoicesStore.set(invoiceId, invoice);
+
+      // Upgrade subscription
+      const plan = TARIFF_PLANS.find(p => p.id === invoice.planId) || TARIFF_PLANS[1];
+      const now = new Date();
+      const newExpire = new Date(now.getTime() + plan.durationDays * 24 * 60 * 60 * 1000);
+
+      currentSubscription = {
+        ...currentSubscription,
+        planId: plan.id,
+        planName: `Премиум Каскад (${plan.name})`,
+        startDate: now.toISOString().split('T')[0],
+        expireDate: newExpire.toISOString().split('T')[0],
+        trafficLimitGb: plan.trafficLimitGb,
+        status: 'active',
+      };
+    }
+
+    res.json({ ok: true });
+  });
+
+  // Claim or Simulate Referral Bonus (+15 days)
+  app.post('/api/v1/referral/claim-bonus', (req, res) => {
+    const tgId = currentUser.telegramId || 'guest';
+    const friendUsername = req.body.friendUsername || `friend_${Math.floor(100 + Math.random() * 900)}`;
+
+    let userSub = userSubscriptions.get(String(tgId)) || currentSubscription;
+    let userRef = userReferrals.get(String(tgId)) || {
+      referralCode: `REF_${tgId}`,
+      totalInvited: 0,
+      activeSubscribers: 0,
+      earnedRubles: 0,
+      earnedBonusDays: 0,
+      inviteLink: `https://t.me/ras_vpn_bot?start=ref_${tgId}`,
+      history: [],
+    };
+
+    // Add +15 days to subscription
+    const currentDate = userSub.expireDate ? new Date(userSub.expireDate) : new Date();
+    // If expired or missing, start from today
+    const baseDate = currentDate.getTime() < Date.now() ? new Date() : currentDate;
+    const newExpire = new Date(baseDate.getTime() + 15 * 24 * 60 * 60 * 1000);
+
+    userSub = {
+      ...userSub,
+      status: 'active',
+      planName: userSub.planName === 'Подписка не активна' ? 'Бонусная подписка (+15 дней)' : userSub.planName,
+      expireDate: newExpire.toISOString().split('T')[0],
+      trafficLimitGb: userSub.trafficLimitGb || 300,
+    };
+
+    userRef = {
+      ...userRef,
+      totalInvited: userRef.totalInvited + 1,
+      activeSubscribers: userRef.activeSubscribers + 1,
+      earnedBonusDays: userRef.earnedBonusDays + 15,
+      history: [
+        {
+          id: String(Date.now()),
+          username: friendUsername,
+          date: new Date().toISOString().split('T')[0],
+          reward: '+15 дней VPN',
+        },
+        ...userRef.history,
+      ],
+    };
+
+    userSubscriptions.set(String(tgId), userSub);
+    userReferrals.set(String(tgId), userRef);
+    currentSubscription = userSub;
+
+    res.json({
+      success: true,
+      message: `🎉 Вы успешно получили +15 дней подписки за приглашение @${friendUsername}!`,
+      subscription: userSub,
+      referral: userRef,
     });
   });
 

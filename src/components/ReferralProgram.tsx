@@ -4,15 +4,18 @@ import { Users, Copy, Check, Gift, Award, ArrowUpRight } from 'lucide-react';
 
 interface ReferralProgramProps {
   referral: ReferralStat;
+  onClaimBonus?: () => void;
 }
 
-export const ReferralProgram: React.FC<ReferralProgramProps> = ({ referral }) => {
+export const ReferralProgram: React.FC<ReferralProgramProps> = ({ referral, onClaimBonus }) => {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = () => {
-    navigator.clipboard.writeText(referral.inviteLink);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    if (referral.inviteLink) {
+      navigator.clipboard.writeText(referral.inviteLink);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
   };
 
   return (
@@ -87,26 +90,47 @@ export const ReferralProgram: React.FC<ReferralProgramProps> = ({ referral }) =>
 
       {/* Referral History */}
       <div>
-        <div className="text-xs font-semibold text-slate-300 mb-2">История вознаграждений:</div>
-        <div className="space-y-1.5">
-          {referral.history.map(item => (
-            <div
-              key={item.id}
-              className="bg-slate-950/50 p-2.5 rounded-lg border border-slate-800 flex items-center justify-between text-xs"
+        <div className="flex items-center justify-between mb-2">
+          <div className="text-xs font-semibold text-slate-300">История вознаграждений:</div>
+          {onClaimBonus && (
+            <button
+              onClick={onClaimBonus}
+              className="text-[11px] text-amber-400 hover:text-amber-300 font-semibold bg-amber-500/10 hover:bg-amber-500/20 px-2.5 py-1 rounded-lg border border-amber-500/30 flex items-center gap-1 transition-all active:scale-95"
             >
-              <div className="flex items-center gap-2">
-                <Users className="w-3.5 h-3.5 text-slate-400" />
-                <span className="font-mono text-slate-200">@{item.username}</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <span className="text-slate-500 text-[11px]">{item.date}</span>
-                <span className="font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
-                  {item.reward}
-                </span>
-              </div>
-            </div>
-          ))}
+              <Gift className="w-3 h-3 text-amber-400" />
+              <span>+ Тестовое приглашение (+15 дней)</span>
+            </button>
+          )}
         </div>
+
+        {referral.history.length === 0 ? (
+          <div className="bg-slate-950/60 p-4 rounded-xl border border-slate-800 text-center space-y-1.5">
+            <div className="text-xs font-semibold text-slate-300">У вас пока нет приглашенных друзей</div>
+            <p className="text-[11px] text-slate-400 max-w-sm mx-auto leading-relaxed">
+              Отправьте вашу реферальную ссылку друзьям. Как только друг перейдет и оформит подписку, вам автоматически начислится <span className="text-amber-300 font-semibold">+15 дней бесплатно</span>!
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-1.5">
+            {referral.history.map(item => (
+              <div
+                key={item.id}
+                className="bg-slate-950/50 p-2.5 rounded-lg border border-slate-800 flex items-center justify-between text-xs"
+              >
+                <div className="flex items-center gap-2">
+                  <Users className="w-3.5 h-3.5 text-slate-400" />
+                  <span className="font-mono text-slate-200">@{item.username}</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="text-slate-500 text-[11px]">{item.date}</span>
+                  <span className="font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                    {item.reward}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

@@ -110,3 +110,31 @@ export interface SystemStats {
   onlineNodes: number;
   serverLoadAverage: number;
 }
+
+export interface PaymentSettings {
+  cardlinkShopId: string;
+  cardlinkApiKey: string;
+  cryptoBotToken: string;
+  walletTrc20: string;
+  walletTon: string;
+  alfaAccount: string;
+  alfaRecipient: string;
+  autoActivateOnPayment: boolean;
+}
+
+export interface CryptoInvoice {
+  id: string;
+  planId: string;
+  planName: string;
+  amountRub: number;
+  amountUsdt: number;
+  amountTon: number;
+  payUrl?: string;
+  cardlinkUrl?: string;
+  walletTrc20: string;
+  walletTon: string;
+  status: 'pending' | 'paid' | 'expired';
+  createdAt: string;
+  expiresAt: string;
+  memoCode: string;
+}
