@@ -42,7 +42,21 @@ async function startServer() {
   let exitNodes = [...EXIT_NODES];
   let cascadeRoutes = [...CASCADE_ROUTES];
 
-  // ==================== API ROUTES ====================
+  // ==================== API & VERIFICATION ROUTES ====================
+
+  // Cardlink & Merchant verification handler
+  app.use((req, res, next) => {
+    const url = req.url.toLowerCase();
+    if (
+      url.includes('shop-verification') || 
+      url.includes('gpmp0b6nmy') || 
+      url.includes('cardlink-verification')
+    ) {
+      res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+      return res.status(200).send('shop-verification-GPmp0B6NmY');
+    }
+    next();
+  });
 
   // Health check
   app.get('/api/health', (req, res) => {
