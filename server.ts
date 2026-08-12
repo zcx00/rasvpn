@@ -531,17 +531,32 @@ async function startServer() {
     const { token } = req.params;
     const userAgent = (req.headers['user-agent'] || '').toLowerCase();
     const format = (req.query.format as string || '').toLowerCase();
+    const subType = (req.query.type as string || '').toLowerCase();
 
-    // Generate VLESS Reality URIs with XTLS-Vision flow for max speed & anti-censorship
-    const v2rayLinks = cascadeRoutes.map(route => {
+    // 1. Generate Cascade VLESS Links (RU entry -> Foreign exit)
+    const cascadeV2rayLinks = cascadeRoutes.map(route => {
       const exitNode = exitNodes.find(e => e.id === route.exitNodeId) || exitNodes[0];
       const entryNode = entryNodes.find(e => e.id === route.entryNodeId) || entryNodes[0];
-      const tag = `${route.code} (${entryNode.code}➔${exitNode.code})`;
+      const tag = `RAS VPN 🛡️ [Каскад Обход ТСПУ] 🇷🇺➔${exitNode.flag} (${exitNode.location.split(',')[0]})`;
       const encodedRemark = encodeURIComponent(tag);
       return `vless://${token}@${entryNode.ip}:${entryNode.port}?encryption=none&security=reality&flow=xtls-rprx-vision&sni=dl.google.com&fp=chrome&pbk=7a9d3e1f0b4c8a2e5d9c6b3a1f0e4d2c&sid=1a2b3c4d&type=tcp#${encodedRemark}`;
     });
 
-    const rawSubContent = v2rayLinks.join('\n');
+    // 2. Generate Direct Foreign VLESS Links (Direct to Foreign nodes)
+    const directV2rayLinks = exitNodes.map(node => {
+      const tag = `RAS VPN 🌍 [Обычная] ${node.flag} ${node.name}`;
+      const encodedRemark = encodeURIComponent(tag);
+      return `vless://${token}@${node.ip}:${node.port}?encryption=none&security=reality&flow=xtls-rprx-vision&sni=dl.google.com&fp=chrome&pbk=7a9d3e1f0b4c8a2e5d9c6b3a1f0e4d2c&sid=1a2b3c4d&type=tcp#${encodedRemark}`;
+    });
+
+    let activeV2rayLinks = [...cascadeV2rayLinks, ...directV2rayLinks];
+    if (subType === 'cascade') {
+      activeV2rayLinks = cascadeV2rayLinks;
+    } else if (subType === 'standard') {
+      activeV2rayLinks = directV2rayLinks;
+    }
+
+    const rawSubContent = activeV2rayLinks.join('\n');
     const base64Sub = Buffer.from(rawSubContent).toString('base64');
 
     // Sing-box JSON Config format
@@ -658,7 +673,7 @@ ${cascadeRoutes.map(r => {
         trafficLimitGb: currentSubscription.trafficLimitGb,
         trafficUsedGb: currentSubscription.trafficUsedGb,
         protocol: 'VLESS + Reality (XTLS-Vision)',
-        vlessLinks: v2rayLinks,
+        vlessLinks: activeV2rayLinks,
         rawSubContent,
         base64Sub,
         cascadeRoutesCount: cascadeRoutes.length,

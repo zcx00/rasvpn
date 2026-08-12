@@ -55,7 +55,7 @@ export const SubscriptionCard: React.FC<SubscriptionCardProps> = ({
           </div>
 
           <span className="text-[11px] font-semibold text-slate-400 bg-slate-800/80 px-2.5 py-0.5 rounded-full border border-slate-700">
-            Нет активного VLESS ключа
+            Нет активного ключа
           </span>
         </div>
 
@@ -65,7 +65,7 @@ export const SubscriptionCard: React.FC<SubscriptionCardProps> = ({
             Безопасный & Быстрый VPN
           </h3>
           <p className="text-xs sm:text-sm text-slate-400 max-w-lg leading-relaxed">
-            Подключите каскадный VLESS + Reality VPN. Доступ к YouTube 4K, Instagram и играм без задержек. Выберите подходящий тариф для защиты всех ваших устройств.
+            Подключите надежный RAS VPN. Доступ к YouTube 4K, Instagram и играм без задержек и сбоев. Выберите тариф для всех ваших устройств.
           </p>
         </div>
 
@@ -104,7 +104,7 @@ export const SubscriptionCard: React.FC<SubscriptionCardProps> = ({
         <div className="flex items-center gap-1.5 flex-wrap">
           {subscription.protocol && (
             <span className="text-[11px] font-semibold text-cyan-400 bg-cyan-950/60 px-2 py-0.5 rounded-full border border-cyan-800/60">
-              {subscription.protocol}
+              Защищенный трафик
             </span>
           )}
           <div className="flex items-center gap-1.5 text-[11px] font-mono bg-slate-950/80 text-slate-300 px-2.5 py-0.5 rounded-full border border-slate-800">

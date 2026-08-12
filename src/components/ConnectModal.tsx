@@ -98,7 +98,7 @@ export const ConnectModal: React.FC<ConnectModalProps> = ({ subscription, isOpen
             </div>
             <div>
               <h3 className="font-bold text-white text-sm sm:text-base">Подключение VPN</h3>
-              <p className="text-[11px] sm:text-xs text-slate-400">VLESS + Reality (Happ, Karing, V2RayTun)</p>
+              <p className="text-[11px] sm:text-xs text-slate-400">Быстрое добавление в 1 клик</p>
             </div>
           </div>
           <button

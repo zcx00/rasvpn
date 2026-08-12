@@ -1,23 +1,27 @@
 import React, { useState } from 'react';
 import { TariffPlan } from '../types';
 import { TARIFF_PLANS } from '../data/mockData';
-import { CreditCard, Check, Sparkles, Shield, Star, Wallet, Lock } from 'lucide-react';
+import { CreditCard, Check, Sparkles, Shield, Star, Lock, Zap, Server } from 'lucide-react';
 
 interface TariffsSectionProps {
   onSelectPlan: (plan: TariffPlan, paymentMethod: string) => void;
 }
 
 export const TariffsSection: React.FC<TariffsSectionProps> = ({ onSelectPlan }) => {
-  const [selectedPlan, setSelectedPlan] = useState<TariffPlan>(TARIFF_PLANS[1]);
-  const [paymentMethod, setPaymentMethod] = useState<'card' | 'stars' | 'crypto' | 'sbp'>('card');
+  const [activeType, setActiveType] = useState<'cascade' | 'standard'>('cascade');
+  const [selectedPlan, setSelectedPlan] = useState<TariffPlan>(
+    TARIFF_PLANS.find(p => p.type === 'cascade') || TARIFF_PLANS[0]
+  );
   const [processing, setProcessing] = useState(false);
+
+  const filteredPlans = TARIFF_PLANS.filter(p => p.type === activeType);
 
   const handleCheckout = () => {
     setProcessing(true);
     setTimeout(() => {
       setProcessing(false);
-      onSelectPlan(selectedPlan, paymentMethod);
-    }, 1000);
+      onSelectPlan(selectedPlan, 'sbp');
+    }, 800);
   };
 
   return (
@@ -28,13 +32,67 @@ export const TariffsSection: React.FC<TariffsSectionProps> = ({ onSelectPlan }) 
           <span>Тарифные планы RAS VPN</span>
         </h3>
         <p className="text-xs text-slate-400 mt-0.5">
-          Единая подписка на все VLESS серверы + высокая скорость без лимитов
+          Выберите тип подписки и тарифный план для подключения
         </p>
+      </div>
+
+      {/* Subscription Type Selector Tabs */}
+      <div className="grid grid-cols-2 gap-2 bg-slate-950 p-1.5 rounded-xl border border-slate-800">
+        <button
+          onClick={() => {
+            setActiveType('cascade');
+            const cascadePlan = TARIFF_PLANS.find(p => p.type === 'cascade');
+            if (cascadePlan) setSelectedPlan(cascadePlan);
+          }}
+          className={`py-2.5 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+            activeType === 'cascade'
+              ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md shadow-blue-900/40'
+              : 'text-slate-400 hover:text-white'
+          }`}
+        >
+          <Zap className="w-3.5 h-3.5 text-amber-300 fill-amber-300 shrink-0" />
+          <span>Обход глушилок (Каскад)</span>
+        </button>
+
+        <button
+          onClick={() => {
+            setActiveType('standard');
+            const stdPlan = TARIFF_PLANS.find(p => p.type === 'standard');
+            if (stdPlan) setSelectedPlan(stdPlan);
+          }}
+          className={`py-2.5 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+            activeType === 'standard'
+              ? 'bg-gradient-to-r from-cyan-600 to-teal-600 text-white shadow-md shadow-cyan-900/40'
+              : 'text-slate-400 hover:text-white'
+          }`}
+        >
+          <Server className="w-3.5 h-3.5 text-cyan-300 shrink-0" />
+          <span>Обычная подписка</span>
+        </button>
+      </div>
+
+      {/* Description Info Banner */}
+      <div className="text-xs p-3 rounded-xl bg-slate-950/80 border border-slate-800/80 text-slate-300 flex items-start gap-2.5">
+        {activeType === 'cascade' ? (
+          <>
+            <Zap className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+            <div>
+              <span className="font-bold text-amber-300">Подписка «Обход глушилок»:</span> Подключение проходит через <strong className="text-white">Российский сервер (Москва)</strong> с пробросом трафика на <strong className="text-white">2 Зарубежных сервера (Нидерланды, Германия)</strong>. Полный обход ТСПУ и глушилок РКН.
+            </div>
+          </>
+        ) : (
+          <>
+            <Server className="w-4 h-4 text-cyan-400 shrink-0 mt-0.5" />
+            <div>
+              <span className="font-bold text-cyan-300">Обычная подписка:</span> Прямое подключение к <strong className="text-white">2 Зарубежным серверам (Нидерланды, Германия)</strong>. Минимальный пинг для зарубежного интернета.
+            </div>
+          </>
+        )}
       </div>
 
       {/* Tariff Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        {TARIFF_PLANS.map(plan => {
+        {filteredPlans.map(plan => {
           const isSelected = selectedPlan.id === plan.id;
 
           return (
@@ -43,7 +101,7 @@ export const TariffsSection: React.FC<TariffsSectionProps> = ({ onSelectPlan }) 
               onClick={() => setSelectedPlan(plan)}
               className={`relative cursor-pointer rounded-xl p-4 border transition-all ${
                 isSelected
-                  ? 'bg-blue-950/40 border-cyan-400 shadow-lg shadow-cyan-950/30'
+                  ? 'bg-blue-950/40 border-cyan-400 shadow-lg shadow-cyan-950/30 ring-1 ring-cyan-400/50'
                   : 'bg-slate-950/60 border-slate-800 hover:border-slate-700'
               }`}
             >
@@ -65,14 +123,18 @@ export const TariffsSection: React.FC<TariffsSectionProps> = ({ onSelectPlan }) 
                 {plan.priceRub} <span className="text-xs text-slate-400 font-normal">₽</span>
               </div>
 
-              <div className="text-xs text-slate-300 space-y-1 border-t border-slate-800/80 pt-2">
+              <div className="text-xs text-slate-300 space-y-1.5 border-t border-slate-800/80 pt-2.5">
                 <div className="flex items-center gap-1.5">
                   <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
                   <span>{plan.trafficLimitGb} ГБ скоростного трафика</span>
                 </div>
                 <div className="flex items-center gap-1.5">
                   <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                  <span>Доступ ко всем скоростным локациям</span>
+                  <span>
+                    {plan.type === 'cascade'
+                      ? 'Каскад через РФ (Москва) ➔ NL & DE'
+                      : 'Прямой доступ: Нидерланды & Германия'}
+                  </span>
                 </div>
                 <div className="flex items-center gap-1.5">
                   <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />

@@ -28,7 +28,7 @@ export const Header: React.FC<HeaderProps> = ({ user, activeView, onViewChange }
             <div className="flex items-center gap-1.5">
               <h1 className="font-black text-base sm:text-lg text-white tracking-tight">RAS VPN</h1>
               <span className="text-[9px] sm:text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
-                VLESS
+                PRO
               </span>
             </div>
             <div className="text-[10px] sm:text-xs text-slate-400 font-mono flex items-center gap-1">

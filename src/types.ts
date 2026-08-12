@@ -15,6 +15,7 @@ export interface VpnSubscription {
   marzbanUsername: string;
   token: string;
   subscriptionUrl: string;
+  subscriptionType?: 'standard' | 'cascade';
   planId: string;
   planName: string;
   startDate: string;
@@ -30,6 +31,7 @@ export interface VpnSubscription {
 export interface TariffPlan {
   id: string;
   name: string;
+  type: 'standard' | 'cascade';
   priceRub: number;
   durationDays: number;
   trafficLimitGb: number;

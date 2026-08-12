@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { CascadeRoute, EntryNode, ExitNode } from '../types';
-import { Server, ArrowRight, ShieldCheck, Sparkles, RefreshCw, Zap, CheckCircle2 } from 'lucide-react';
+import { Server, ArrowRight, ShieldCheck, Sparkles, RefreshCw, Zap, CheckCircle2, Globe } from 'lucide-react';
 
 interface CascadeServerListProps {
   cascadeRoutes: CascadeRoute[];
@@ -15,9 +15,9 @@ export const CascadeServerList: React.FC<CascadeServerListProps> = ({
   exitNodes,
   onConnectClick,
 }) => {
+  const [activeTab, setActiveTab] = useState<'cascade' | 'standard'>('cascade');
   const [testingPing, setTestingPing] = useState(false);
   const [selectedRouteId, setSelectedRouteId] = useState<string>(cascadeRoutes[0]?.id || '');
-  const [filterTag, setFilterTag] = useState<string>('all');
 
   const handleTestLatency = () => {
     setTestingPing(true);
@@ -25,12 +25,6 @@ export const CascadeServerList: React.FC<CascadeServerListProps> = ({
       setTestingPing(false);
     }, 1200);
   };
-
-  const filteredRoutes = cascadeRoutes.filter(route => {
-    if (filterTag === 'fast') return route.totalPingMs < 45;
-    if (filterTag === 'media') return route.recommendedFor.some(r => r.includes('YouTube') || r.includes('Instagram') || r.includes('Игры'));
-    return true;
-  });
 
   return (
     <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 sm:p-5 shadow-xl space-y-4">
@@ -42,7 +36,7 @@ export const CascadeServerList: React.FC<CascadeServerListProps> = ({
             <span>Серверы и Серверные Локации</span>
           </h3>
           <p className="text-[11px] sm:text-xs text-slate-400 mt-0.5">
-            Защищенный протокол <span className="text-cyan-300 font-semibold">VLESS + Reality (XTLS-Vision)</span>
+            Высокоскоростное <span className="text-cyan-300 font-semibold">Защищенное Соединение</span>
           </p>
         </div>
 
@@ -56,170 +50,190 @@ export const CascadeServerList: React.FC<CascadeServerListProps> = ({
         </button>
       </div>
 
-      {/* Filter Tabs */}
-      <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1">
+      {/* Subscription Type Switcher Tabs */}
+      <div className="grid grid-cols-2 gap-2 bg-slate-950 p-1.5 rounded-xl border border-slate-800">
         <button
-          onClick={() => setFilterTag('all')}
-          className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
-            filterTag === 'all'
-              ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-sm'
-              : 'bg-slate-950/60 text-slate-400 border border-slate-800 hover:text-slate-200'
+          onClick={() => setActiveTab('cascade')}
+          className={`py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+            activeTab === 'cascade'
+              ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md'
+              : 'text-slate-400 hover:text-white'
           }`}
         >
-          Все серверы ({cascadeRoutes.length})
+          <Zap className="w-3.5 h-3.5 text-amber-300 fill-amber-300 shrink-0" />
+          <span>Обход глушилок (Каскад)</span>
         </button>
+
         <button
-          onClick={() => setFilterTag('fast')}
-          className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
-            filterTag === 'fast'
-              ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shadow-sm'
-              : 'bg-slate-950/60 text-slate-400 border border-slate-800 hover:text-slate-200'
+          onClick={() => setActiveTab('standard')}
+          className={`py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+            activeTab === 'standard'
+              ? 'bg-gradient-to-r from-cyan-600 to-teal-600 text-white shadow-md'
+              : 'text-slate-400 hover:text-white'
           }`}
         >
-          ⚡ Низкий пинг (&lt;45 ms)
-        </button>
-        <button
-          onClick={() => setFilterTag('media')}
-          className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
-            filterTag === 'media'
-              ? 'bg-purple-500/20 text-purple-300 border border-purple-500/40 shadow-sm'
-              : 'bg-slate-950/60 text-slate-400 border border-slate-800 hover:text-slate-200'
-          }`}
-        >
-          🎬 Видео & Игры
+          <Globe className="w-3.5 h-3.5 text-cyan-300 shrink-0" />
+          <span>Обычная подписка</span>
         </button>
       </div>
 
-      {/* Server Cards List */}
-      <div className="space-y-3">
-        {filteredRoutes.map(route => {
-          const entry = entryNodes.find(e => e.id === route.entryNodeId) || entryNodes[0];
-          const exit = exitNodes.find(e => e.id === route.exitNodeId) || exitNodes[0];
-          const isSelected = selectedRouteId === route.id;
+      {/* Info Notice Banner */}
+      <div className="text-xs p-3 rounded-xl bg-slate-950/80 border border-slate-800 text-slate-300">
+        {activeTab === 'cascade' ? (
+          <p className="leading-relaxed">
+            🛡️ <strong className="text-amber-300">Каскадная подписка «Обход глушилок»:</strong> Подключение идет через <strong className="text-white">1 Российский сервер (Москва)</strong> с двойным шифрованным туннелем VLESS на <strong className="text-white">2 Зарубежных сервера</strong> (Нидерланды и Германия). Полная защита от блокировок ТСПУ РКН.
+          </p>
+        ) : (
+          <p className="leading-relaxed">
+            🌍 <strong className="text-cyan-300">Обычная подписка:</strong> Прямой доступ к <strong className="text-white">2 Зарубежным серверам</strong> (Нидерланды и Германия). Минимальный пинг для зарубежного трафика.
+          </p>
+        )}
+      </div>
 
-          return (
-            <div
-              key={route.id}
-              onClick={() => setSelectedRouteId(route.id)}
-              className={`group cursor-pointer rounded-2xl p-3.5 sm:p-4 border transition-all ${
-                isSelected
-                  ? 'bg-gradient-to-br from-blue-950/70 via-slate-900 to-slate-950 border-cyan-500/60 shadow-lg shadow-cyan-950/25'
-                  : 'bg-slate-950/70 border-slate-800/80 hover:border-slate-700'
-              }`}
-            >
-              {/* Card Header Info */}
-              <div className="flex items-start justify-between gap-2 mb-3">
-                <div className="flex items-center gap-2.5">
-                  <span className="text-2xl sm:text-3xl leading-none">{route.flag}</span>
-                  <div>
-                    <div className="flex items-center gap-1.5">
-                      <h4 className="font-bold text-white text-sm sm:text-base group-hover:text-cyan-300 transition-colors">
-                        {route.name}
-                      </h4>
-                      {isSelected && (
-                        <CheckCircle2 className="w-4 h-4 text-cyan-400 shrink-0" />
-                      )}
+      {/* Server List */}
+      {activeTab === 'cascade' ? (
+        <div className="space-y-3">
+          {cascadeRoutes.map(route => {
+            const entry = entryNodes.find(e => e.id === route.entryNodeId) || entryNodes[0];
+            const exit = exitNodes.find(e => e.id === route.exitNodeId) || exitNodes[0];
+            const isSelected = selectedRouteId === route.id;
+
+            return (
+              <div
+                key={route.id}
+                onClick={() => setSelectedRouteId(route.id)}
+                className={`group cursor-pointer rounded-2xl p-3.5 sm:p-4 border transition-all ${
+                  isSelected
+                    ? 'bg-gradient-to-br from-blue-950/70 via-slate-900 to-slate-950 border-cyan-500/60 shadow-lg shadow-cyan-950/25'
+                    : 'bg-slate-950/70 border-slate-800/80 hover:border-slate-700'
+                }`}
+              >
+                {/* Header */}
+                <div className="flex items-start justify-between gap-2 mb-3">
+                  <div className="flex items-center gap-2.5">
+                    <span className="text-2xl sm:text-3xl leading-none">🇷🇺 ➔ {exit.flag}</span>
+                    <div>
+                      <div className="flex items-center gap-1.5">
+                        <h4 className="font-bold text-white text-sm sm:text-base group-hover:text-cyan-300 transition-colors">
+                          {route.name}
+                        </h4>
+                        {isSelected && <CheckCircle2 className="w-4 h-4 text-cyan-400 shrink-0" />}
+                      </div>
+                      <div className="text-[11px] font-mono text-slate-400 flex items-center gap-1.5 mt-0.5">
+                        <span>Каскад VLESS</span>
+                        <span className="text-slate-600">•</span>
+                        <span className="text-cyan-300">Вход: Москва 🇷🇺</span>
+                        <span className="text-slate-600">•</span>
+                        <span className="text-emerald-300">Выход: {exit.location.split(',')[0]}</span>
+                      </div>
                     </div>
-                    <div className="text-[11px] font-mono text-slate-400 flex items-center gap-1.5 mt-0.5">
-                      <span>{route.code}</span>
-                      <span className="text-slate-600">•</span>
-                      <span className="text-slate-300 font-sans">{exit.location.split(',')[0]}</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex flex-col items-end gap-1">
-                  <span
-                    className={`text-[11px] sm:text-xs font-mono font-bold px-2.5 py-0.5 sm:py-1 rounded-full border ${
-                      testingPing
-                        ? 'bg-slate-800 text-slate-400 border-slate-700 animate-pulse'
-                        : route.totalPingMs < 40
-                        ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-                        : route.totalPingMs < 60
-                        ? 'bg-amber-500/10 text-amber-400 border-amber-500/20'
-                        : 'bg-rose-500/10 text-rose-400 border-rose-500/20'
-                    }`}
-                  >
-                    {testingPing ? '⌛ ...' : `🟢 ${route.totalPingMs} ms`}
-                  </span>
-                  <span className="text-[10px] text-slate-500">
-                    Нагрузка: {Math.floor(25 + Math.random() * 30)}%
-                  </span>
-                </div>
-              </div>
-
-              {/* Interactive VLESS Connection Path Flow Diagram */}
-              <div className="bg-slate-950/90 rounded-xl p-2.5 border border-slate-800/90 space-y-2">
-                <div className="flex items-center justify-between text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-1">
-                  <span>Схема VLESS + Reality</span>
-                  <span className="text-cyan-400 flex items-center gap-1">
-                    <ShieldCheck className="w-3 h-3" />
-                    Зашифровано
-                  </span>
-                </div>
-
-                {/* Flow Diagram Stage Boxes */}
-                <div className="grid grid-cols-3 gap-1.5 text-center text-[10px] sm:text-xs font-medium">
-                  {/* Stage 1: User */}
-                  <div className="bg-slate-900 p-2 rounded-lg border border-slate-800 flex flex-col items-center justify-center gap-0.5">
-                    <span className="text-xs">👤</span>
-                    <span className="font-bold text-slate-200">Вы</span>
-                    <span className="text-[9px] text-slate-500 font-mono">Устройство</span>
                   </div>
 
-                  {/* Stage 2: VLESS Tunnel */}
-                  <div className="bg-cyan-950/30 p-2 rounded-lg border border-cyan-800/40 flex flex-col items-center justify-center gap-0.5">
-                    <span className="text-xs">🔒</span>
-                    <span className="font-bold text-cyan-300">VLESS</span>
-                    <span className="text-[9px] text-cyan-400/80 font-mono">XTLS-Vision</span>
-                  </div>
-
-                  {/* Stage 3: Server Location Exit */}
-                  <div className="bg-emerald-950/30 p-2 rounded-lg border border-emerald-800/40 flex flex-col items-center justify-center gap-0.5">
-                    <span className="text-xs">{exit.flag}</span>
-                    <span className="font-bold text-emerald-300 truncate max-w-full">
-                      {exit.location.split(',')[0]}
+                  <div className="flex flex-col items-end gap-1">
+                    <span className="text-[11px] font-mono font-bold px-2.5 py-0.5 rounded-full border bg-emerald-500/10 text-emerald-400 border-emerald-500/20">
+                      {testingPing ? '⌛ ...' : `🟢 ${route.totalPingMs} ms`}
                     </span>
-                    <span className="text-[9px] text-emerald-400/80 font-mono">Интернет</span>
                   </div>
                 </div>
-              </div>
 
-              {/* Recommended Tags & Quick Connect Button */}
-              <div className="flex flex-wrap items-center justify-between gap-2 mt-2.5 pt-2 border-t border-slate-800/60">
-                {route.recommendedFor && route.recommendedFor.length > 0 && (
-                  <div className="flex items-center gap-1.5">
-                    <Sparkles className="w-3 h-3 text-amber-400 shrink-0" />
-                    <div className="flex flex-wrap gap-1">
-                      {route.recommendedFor.map((tag, idx) => (
-                        <span
-                          key={idx}
-                          className="text-[10px] bg-slate-900 text-slate-300 px-2 py-0.5 rounded-md border border-slate-800"
-                        >
-                          {tag}
-                        </span>
-                      ))}
+                {/* Cascade Flow Diagram */}
+                <div className="bg-slate-950/90 rounded-xl p-2.5 border border-slate-800 space-y-2">
+                  <div className="flex items-center justify-between text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-1">
+                    <span>Маршрут VLESS Reality</span>
+                    <span className="text-amber-400 flex items-center gap-1">
+                      <Zap className="w-3 h-3" /> Обход ТСПУ
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-4 gap-1 text-center text-[10px] font-medium">
+                    <div className="bg-slate-900 p-1.5 rounded-lg border border-slate-800">
+                      <div className="text-xs">👤</div>
+                      <div className="font-bold text-slate-200">Вы</div>
+                      <div className="text-[8px] text-slate-500">Клиент</div>
+                    </div>
+
+                    <div className="bg-blue-950/40 p-1.5 rounded-lg border border-blue-800/40">
+                      <div className="text-xs">🇷🇺</div>
+                      <div className="font-bold text-blue-300">Москва</div>
+                      <div className="text-[8px] text-blue-400">Вход РФ</div>
+                    </div>
+
+                    <div className="bg-indigo-950/40 p-1.5 rounded-lg border border-indigo-800/40">
+                      <div className="text-xs">🔒</div>
+                      <div className="font-bold text-indigo-300">Каскад</div>
+                      <div className="text-[8px] text-indigo-400">VLESS</div>
+                    </div>
+
+                    <div className="bg-emerald-950/40 p-1.5 rounded-lg border border-emerald-800/40">
+                      <div className="text-xs">{exit.flag}</div>
+                      <div className="font-bold text-emerald-300 truncate">{exit.location.split(',')[0]}</div>
+                      <div className="text-[8px] text-emerald-400">Зарубеж</div>
                     </div>
                   </div>
-                )}
+                </div>
 
                 {onConnectClick && (
+                  <div className="flex justify-end mt-2 pt-2 border-t border-slate-800/60">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onConnectClick();
+                      }}
+                      className="bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 px-3 py-1 rounded-xl text-xs font-bold flex items-center gap-1 transition-all active:scale-95"
+                    >
+                      <Zap className="w-3.5 h-3.5" />
+                      <span>Подключить</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        /* Standard Direct Foreign Servers List */
+        <div className="space-y-3">
+          {exitNodes.map(node => (
+            <div
+              key={node.id}
+              className="bg-slate-950/70 border border-slate-800 rounded-2xl p-4 space-y-3"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <span className="text-3xl">{node.flag}</span>
+                  <div>
+                    <h4 className="font-bold text-white text-base">{node.name}</h4>
+                    <div className="text-xs text-slate-400 font-mono mt-0.5">
+                      Стандартный доступ • {node.location}
+                    </div>
+                  </div>
+                </div>
+
+                <span className="text-xs font-mono font-bold px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                  🟢 {node.pingMs} ms
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between text-xs text-slate-400 bg-slate-900/80 p-2.5 rounded-xl border border-slate-800">
+                <span>Скоростной канал</span>
+                <span className="text-cyan-400 font-semibold">Прямое подключение</span>
+              </div>
+
+              {onConnectClick && (
+                <div className="flex justify-end pt-1">
                   <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onConnectClick();
-                    }}
-                    className="ml-auto bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 px-3 py-1 rounded-xl text-xs font-bold flex items-center gap-1 transition-all active:scale-95"
+                    onClick={onConnectClick}
+                    className="bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 px-3 py-1 rounded-xl text-xs font-bold flex items-center gap-1 transition-all active:scale-95"
                   >
                     <Zap className="w-3.5 h-3.5" />
                     <span>Подключить</span>
                   </button>
-                )}
-              </div>
+                </div>
+              )}
             </div>
-          );
-        })}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 };
