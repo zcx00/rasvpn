@@ -48,7 +48,7 @@ declare global {
 
 export default function App() {
   const [activeView, setActiveView] = useState<'app' | 'sub' | 'admin'>('app');
-  const [appTab, setAppTab] = useState<'main' | 'servers' | 'plans' | 'referrals'>('main');
+  const [appTab, setAppTab] = useState<'main' | 'plans' | 'referrals'>('main');
 
   // Application state
   const [user, setUser] = useState<UserProfile>(INITIAL_USER);
@@ -330,7 +330,7 @@ export default function App() {
           />
 
           {/* Mini App Bottom Navigation Tabs */}
-          <div className="grid grid-cols-4 bg-slate-900/90 p-1 rounded-2xl border border-slate-800 text-[11px] sm:text-xs font-semibold">
+          <div className="grid grid-cols-3 bg-slate-900/90 p-1 rounded-2xl border border-slate-800 text-[11px] sm:text-xs font-semibold">
             <button
               onClick={() => setAppTab('main')}
               className={`py-2.5 px-1 rounded-xl flex items-center justify-center gap-1 transition-all ${
@@ -339,16 +339,6 @@ export default function App() {
             >
               <Zap className="w-3.5 h-3.5 shrink-0" />
               <span className="truncate">Главная</span>
-            </button>
-
-            <button
-              onClick={() => setAppTab('servers')}
-              className={`py-2.5 px-1 rounded-xl flex items-center justify-center gap-1 transition-all ${
-                appTab === 'servers' ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30' : 'text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              <Server className="w-3.5 h-3.5 shrink-0" />
-              <span className="truncate">Серверы</span>
             </button>
 
             <button
@@ -376,21 +366,10 @@ export default function App() {
           {appTab === 'main' && (
             <div className="space-y-6">
               <CascadeServerList
-                cascadeRoutes={cascadeRoutes}
-                entryNodes={entryNodes}
                 exitNodes={exitNodes}
                 onConnectClick={() => subscription.status === 'active' && subscription.expireDate ? setIsConnectModalOpen(true) : setAppTab('plans')}
               />
             </div>
-          )}
-
-          {appTab === 'servers' && (
-            <CascadeServerList
-              cascadeRoutes={cascadeRoutes}
-              entryNodes={entryNodes}
-              exitNodes={exitNodes}
-              onConnectClick={() => subscription.status === 'active' && subscription.expireDate ? setIsConnectModalOpen(true) : setAppTab('plans')}
-            />
           )}
 
           {appTab === 'plans' && (
