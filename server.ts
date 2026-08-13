@@ -1,3 +1,4 @@
+import fs from "fs";
 import express from 'express';
 import path from 'path';
 import { createServer as createViteServer } from 'vite';
@@ -40,11 +41,18 @@ async function startServer() {
   let currentSubscription = { ...INITIAL_SUBSCRIPTION };
 
   // Marzban Config
+  
+  const MARZBAN_FILE = path.join(process.cwd(), "marzban.json");
   let marzbanConfig = {
     url: "http://89.22.225.206:8080",
     username: "admin",
     password: ""
   };
+  if (fs.existsSync(MARZBAN_FILE)) {
+    try {
+      marzbanConfig = JSON.parse(fs.readFileSync(MARZBAN_FILE, "utf-8"));
+    } catch (e) {}
+  }
 
   async function getMarzbanToken() {
     const baseUrl = marzbanConfig.url.replace(/\/$/, "");
@@ -83,12 +91,12 @@ async function startServer() {
 
   // Health check
   app.get('/api/health', (req, res) => {
-    res.json({ status: 'ok', time: new Date().toISOString(), service: 'RAS VPN Master Backend' });
+    res.json({ status: 'ok' });
   });
 
   // User Profile & Subscription (GET & POST)
   app.get('/api/v1/user', (req, res) => {
-    res.json({
+      res.json({
       user: currentUser,
       subscription: currentSubscription,
       referral: INITIAL_REFERRAL,
@@ -158,7 +166,7 @@ async function startServer() {
 
       const customReferral = userReferrals.get(String(tgId));
 
-      return res.json({
+      res.json({
         user: currentUser,
         subscription: currentSubscription,
         referral: customReferral,
@@ -166,7 +174,7 @@ async function startServer() {
       });
     }
 
-    res.json({
+      res.json({
       user: currentUser,
       subscription: currentSubscription,
       referral: INITIAL_REFERRAL,
@@ -185,7 +193,11 @@ async function startServer() {
     if (url) marzbanConfig.url = url;
     if (username) marzbanConfig.username = username;
     if (password !== undefined) marzbanConfig.password = password;
-    res.json({ success: true, marzbanConfig });
+    try {
+      fs.writeFileSync(MARZBAN_FILE, JSON.stringify(marzbanConfig, null, 2));
+    } catch(e) {}
+
+      res.json({
   });
 
   app.post("/api/v1/admin/marzban/test", async (req, res) => {
@@ -199,8 +211,36 @@ async function startServer() {
     }
   });
 
+  // Get Marzban Stats and Users
+  app.get("/api/v1/admin/marzban/stats", async (req, res) => {
+    try {
+      const token = await getMarzbanToken();
+      const baseUrl = marzbanConfig.url.replace(/\/$/, "");
+      const systemRes = await fetch(`${baseUrl}/api/system`, { headers: { Authorization: `Bearer ${token}` } });
+      if (!systemRes.ok) throw new Error("Failed to fetch system stats");
+      const systemData = await systemRes.json();
+
+      const usersRes = await fetch(`${baseUrl}/api/users`, { headers: { Authorization: `Bearer ${token}` } });
+      let usersData = [];
+      if (usersRes.ok) usersData = await usersRes.json();
+
+      const nodesRes = await fetch(`${baseUrl}/api/nodes`, { headers: { Authorization: `Bearer ${token}` } });
+      let nodesData = [];
+      if (nodesRes.ok) nodesData = await nodesRes.json();
+
+      res.json({
+        success: true,
+        system: systemData,
+        users: usersData,
+        nodes: nodesData
+      });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
   app.get('/api/v1/servers', (req, res) => {
-    res.json({
+      res.json({
       entryNodes,
       exitNodes,
       cascadeRoutes,
@@ -213,7 +253,8 @@ async function startServer() {
   });
 
   // Purchase or Renew Subscription
-  app.post('/api/v1/subscribe', (req, res) => {
+  app.post("/api/v1/subscribe", async (req, res) => {
+
     const { planId, paymentMethod } = req.body;
     const plan = TARIFF_PLANS.find(p => p.id === planId) || TARIFF_PLANS[1];
 
@@ -235,7 +276,7 @@ async function startServer() {
       userSubscriptions.set(String(currentUser.telegramId), currentSubscription);
     }
 
-    res.json({
+      res.json({
       success: true,
       message: `Подписка на ${plan.name} успешно оформлена!`,
       subscription: currentSubscription,
@@ -247,7 +288,7 @@ async function startServer() {
 
   // Get Payment Public Settings
   app.get('/api/v1/payment/settings', (req, res) => {
-    res.json({
+      res.json({
       cardlinkShopId: paymentSettings.cardlinkShopId,
       hasCardlink: Boolean(paymentSettings.cardlinkShopId && paymentSettings.cardlinkApiKey),
       walletTrc20: paymentSettings.walletTrc20,
@@ -269,7 +310,7 @@ async function startServer() {
     if (alfaAccount !== undefined) paymentSettings.alfaAccount = alfaAccount;
     if (alfaRecipient !== undefined) paymentSettings.alfaRecipient = alfaRecipient;
 
-    res.json({
+      res.json({
       success: true,
       message: '⚙️ Настройки Cardlink, платежей и кошельков сохранены!',
       settings: paymentSettings,
@@ -371,7 +412,7 @@ async function startServer() {
 
     invoicesStore.set(invoiceId, invoice);
 
-    res.json({
+      res.json({
       success: true,
       invoice,
     });
@@ -413,7 +454,7 @@ async function startServer() {
       userSubscriptions.set(String(currentUser.telegramId), currentSubscription);
     }
 
-    res.json({
+      res.json({
       success: true,
       status: 'paid',
       message: '🎉 Оплата успешно подтверждена! Подписка активна.',
@@ -449,7 +490,7 @@ async function startServer() {
       };
     }
 
-    res.json({ ok: true });
+      res.json({
   });
 
   // Claim or Simulate Referral Bonus (+15 days)
@@ -502,7 +543,7 @@ async function startServer() {
     userReferrals.set(String(tgId), userRef);
     currentSubscription = userSub;
 
-    res.json({
+      res.json({
       success: true,
       message: `🎉 Вы успешно получили +15 дней подписки за приглашение @${friendUsername}!`,
       subscription: userSub,
@@ -511,8 +552,7 @@ async function startServer() {
   });
 
   // Admin: Get / Create / Update Nodes
-  app.get('/api/v1/admin/nodes', (req, res) => {
-    res.json({ entryNodes, exitNodes, stats: SYSTEM_STATS });
+  app.get("/api/v1/admin/nodes", (req, res) => {    res.json({ entryNodes, exitNodes });  });
   });
 
   app.post('/api/v1/admin/nodes', (req, res) => {
@@ -520,17 +560,15 @@ async function startServer() {
     if (type === 'entry') {
       const newNode = { ...node, id: `node_ru_${Date.now()}` };
       entryNodes.push(newNode);
-      return res.json({ success: true, node: newNode });
+
+      res.json({ success: true, node: newNode });
     } else {
-      const newNode = { ...node, id: `node_exit_${Date.now()}` };
-      exitNodes.push(newNode);
-      return res.json({ success: true, node: newNode });
+      const newNode = { ...node, id: `node_exit_${Date.now()}` };      exitNodes.push(newNode);      res.json({ success: true, node: newNode });
     }
   });
 
   // Admin: Get / Update Cascade Routes
-  app.get('/api/v1/admin/routes', (req, res) => {
-    res.json({ cascadeRoutes });
+  app.get("/api/v1/admin/routes", (req, res) => {    res.json({ cascadeRoutes });  });
   });
 
   app.post('/api/v1/admin/routes', (req, res) => {
@@ -549,7 +587,6 @@ async function startServer() {
       status: 'active' as const,
       recommendedFor: ['Высокая скорость', 'Защита'],
     };
-
     cascadeRoutes.push(newRoute);
     res.json({ success: true, route: newRoute });
   });
@@ -564,7 +601,7 @@ async function startServer() {
     const entryConfig = generateEntryXrayConfig(entry, exit, clientUuid);
     const exitConfig = generateExitXrayConfig(exit, clientUuid);
 
-    res.json({
+      res.json({
       entryNode: entry,
       exitNode: exit,
       entryConfigJson: JSON.stringify(entryConfig, null, 2),
@@ -714,7 +751,7 @@ ${cascadeRoutes.map(r => {
 
     // Otherwise if JSON was requested via headers
     if (req.accepts('json') && !req.accepts('html')) {
-      return res.json({
+      res.json({
         marzbanUsername: currentSubscription.marzbanUsername,
         expireDate: currentSubscription.expireDate,
         trafficLimitGb: currentSubscription.trafficLimitGb,

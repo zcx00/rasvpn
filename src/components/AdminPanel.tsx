@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { EntryNode, ExitNode, CascadeRoute, SystemStats } from '../types';
 import { generateDockerComposeSnippet } from '../utils/xrayGenerator';
-import { Server, Cpu, Activity, Plus, FileCode, Check, Copy, Shield, Network, RefreshCw, Terminal, CreditCard, Wallet } from 'lucide-react';
+import { Server, Cpu, Activity, Plus, FileCode, Check, Copy, Shield, Network, RefreshCw, Terminal, CreditCard, Wallet, Users } from 'lucide-react';
 
 interface AdminPanelProps {
   entryNodes: EntryNode[];
@@ -20,7 +20,20 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   onAddNode,
   onAddRoute,
 }) => {
-  const [tab, setTab] = useState<'nodes' | 'routes' | 'xray' | 'docker' | 'payments' | 'marzban'>('nodes');
+  const [tab, setTab] = useState<'marzban' | 'users' | 'payments'>('marzban');
+  const [marzbanData, setMarzbanData] = useState<any>(null);
+  
+  React.useEffect(() => {
+    fetch('/api/v1/admin/marzban/stats')
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+           setMarzbanData(data);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
 
   // Payment Settings State
   const [cardlinkShopId, setCardlinkShopId] = useState('');
@@ -191,61 +204,32 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* Overview Stats Header */}
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+            {/* Overview Stats Header */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div className="bg-slate-900/90 p-4 rounded-xl border border-slate-800">
           <div className="text-xs text-slate-400">Активных пользователей</div>
-          <div className="text-xl font-bold text-cyan-400 mt-1">{stats.activeUsers}</div>
+          <div className="text-xl font-bold text-cyan-400 mt-1">{marzbanData ? marzbanData.system.users_active : 0} / {marzbanData ? marzbanData.system.total_user : 0}</div>
         </div>
         <div className="bg-slate-900/90 p-4 rounded-xl border border-slate-800">
-          <div className="text-xs text-slate-400">Передано трафика</div>
-          <div className="text-xl font-bold text-emerald-400 mt-1">{stats.totalTrafficTb} ТБ</div>
-        </div>
-        <div className="bg-slate-900/90 p-4 rounded-xl border border-slate-800">
-          <div className="text-xs text-slate-400">Каскадных маршрутов</div>
-          <div className="text-xl font-bold text-amber-400 mt-1">{cascadeRoutes.length}</div>
+          <div className="text-xs text-slate-400">Передано трафика (Marzban)</div>
+          <div className="text-xl font-bold text-emerald-400 mt-1">
+            {marzbanData ? (marzbanData.system.outgoing_bandwidth / 1073741824).toFixed(2) : 0} GB
+          </div>
         </div>
         <div className="bg-slate-900/90 p-4 rounded-xl border border-slate-800">
           <div className="text-xs text-slate-400">Узлов в сети</div>
-          <div className="text-xl font-bold text-blue-400 mt-1">{entryNodes.length + exitNodes.length}</div>
+          <div className="text-xl font-bold text-blue-400 mt-1">{marzbanData ? marzbanData.nodes.length : 0}</div>
         </div>
-        <div className="bg-slate-900/90 p-4 rounded-xl border border-slate-800 col-span-2 sm:col-span-1">
-          <div className="text-xs text-slate-400">Средняя нагрузка</div>
-          <div className="text-xl font-bold text-purple-400 mt-1">{stats.serverLoadAverage}%</div>
+        <div className="bg-slate-900/90 p-4 rounded-xl border border-slate-800">
+          <div className="text-xs text-slate-400">Память сервера</div>
+          <div className="text-xl font-bold text-purple-400 mt-1">
+            {marzbanData ? ((marzbanData.system.mem_used / marzbanData.system.mem_total)*100).toFixed(1) : 0}%
+          </div>
         </div>
       </div>
 
       {/* Admin Tabs */}
       <div className="flex border-b border-slate-800 bg-slate-900/50 p-2 rounded-xl gap-2 text-xs font-semibold">
-        <button
-          onClick={() => setTab('nodes')}
-          className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-all ${
-            tab === 'nodes' ? 'bg-purple-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-200'
-          }`}
-        >
-          <Server className="w-4 h-4" />
-          <span>Узлы (RU/EU Nodes)</span>
-        </button>
-
-        <button
-          onClick={() => setTab('routes')}
-          className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-all ${
-            tab === 'routes' ? 'bg-purple-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-200'
-          }`}
-        >
-          <Network className="w-4 h-4" />
-          <span>Каскады (RU ➔ EU)</span>
-        </button>
-
-        <button
-          onClick={() => {
-            setTab('xray');
-            fetchXrayConfigs();
-          }}
-          className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-all ${
-            tab === 'xray' ? 'bg-purple-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-200'
-          }`}
-        >
         <button
           onClick={() => setTab("marzban")}
           className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-all ${
@@ -255,378 +239,92 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
           <Server className="w-4 h-4" />
           <span>Marzban Integration</span>
         </button>
-
-          <FileCode className="w-4 h-4" />
-          <span>Xray JSON Конфиги</span>
-        </button>
-
         <button
-          onClick={() => setTab('docker')}
+          onClick={() => setTab("users")}
           className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-all ${
-            tab === 'docker' ? 'bg-purple-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-200'
+            tab === "users" ? "bg-purple-600 text-white shadow-md" : "text-slate-400 hover:text-slate-200"
           }`}
         >
-          <Terminal className="w-4 h-4" />
-          <span>Docker Compose</span>
+          <Users className="w-4 h-4" />
+          <span>Пользователи (VLESS)</span>
         </button>
-
         <button
           onClick={() => {
             setTab('payments');
             fetchPaymentSettings();
           }}
           className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-all ${
-            tab === 'payments' ? 'bg-purple-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-200'
+            tab === 'payments' ? "bg-purple-600 text-white shadow-md" : "text-slate-400 hover:text-slate-200"
           }`}
         >
           <Wallet className="w-4 h-4 text-emerald-400" />
-          <span>💳 Прием оплаты & Кошельки</span>
+          <span>💳 Оплата & Кошельки</span>
         </button>
       </div>
 
-      {/* TAB 1: NODES MANAGEMENT */}
-      {tab === 'nodes' && (
-        <div className="space-y-6">
-          {/* Node Lists */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Entry Nodes */}
-            <div className="bg-slate-900/90 p-4 rounded-2xl border border-slate-800 space-y-3">
-              <h4 className="font-bold text-white text-sm flex items-center gap-2">
-                <span>🇷🇺 Входные узлы (RU Entry Nodes)</span>
-                <span className="text-xs bg-blue-500/10 text-blue-400 px-2 py-0.5 rounded font-mono">
-                  {entryNodes.length}
-                </span>
-              </h4>
 
-              <div className="space-y-2">
-                {entryNodes.map(node => (
-                  <div key={node.id} className="bg-slate-950/70 p-3 rounded-xl border border-slate-800/80 text-xs flex items-center justify-between">
-                    <div>
-                      <div className="font-bold text-white flex items-center gap-1.5">
-                        <span>{node.flag}</span>
-                        <span>{node.name}</span>
-                        <span className="text-[10px] text-cyan-400 font-mono">({node.code})</span>
-                      </div>
-                      <div className="text-[11px] font-mono text-slate-400 mt-0.5">{node.ip}:{node.port}</div>
-                    </div>
-                    <div className="text-right">
-                      <span className="text-emerald-400 font-bold block">🟢 Online</span>
-                      <span className="text-slate-500 text-[10px]">{node.loadPercent}% load</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Exit Nodes */}
-            <div className="bg-slate-900/90 p-4 rounded-2xl border border-slate-800 space-y-3">
-              <h4 className="font-bold text-white text-sm flex items-center gap-2">
-                <span>🇪🇺 Выходные узлы (EU Exit Nodes)</span>
-                <span className="text-xs bg-emerald-500/10 text-emerald-400 px-2 py-0.5 rounded font-mono">
-                  {exitNodes.length}
-                </span>
-              </h4>
-
-              <div className="space-y-2">
-                {exitNodes.map(node => (
-                  <div key={node.id} className="bg-slate-950/70 p-3 rounded-xl border border-slate-800/80 text-xs flex items-center justify-between">
-                    <div>
-                      <div className="font-bold text-white flex items-center gap-1.5">
-                        <span>{node.flag}</span>
-                        <span>{node.name}</span>
-                        <span className="text-[10px] text-emerald-400 font-mono">({node.code})</span>
-                      </div>
-                      <div className="text-[11px] font-mono text-slate-400 mt-0.5">{node.ip}:{node.port}</div>
-                    </div>
-                    <div className="text-right">
-                      <span className="text-emerald-400 font-bold block">🟢 Online</span>
-                      <span className="text-slate-500 text-[10px]">{node.loadPercent}% load</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
+      
+      {tab === 'users' && (
+        <div className="bg-slate-900/90 p-5 rounded-2xl border border-slate-800 space-y-5">
+          <div className="flex items-center gap-2 text-cyan-400 font-semibold mb-4">
+            <Users className="w-5 h-5" />
+            <span>Управление пользователями Marzban</span>
           </div>
+          <p className="text-xs text-slate-400">
+            Здесь отображаются пользователи, созданные в Marzban (включая тех, кто купил подписку через WebApp). Вы можете просматривать их лимиты и ссылки.
+          </p>
 
-          {/* Add Node Form */}
-          <form onSubmit={handleCreateNode} className="bg-slate-900/90 p-5 rounded-2xl border border-slate-800 space-y-4">
-            <h4 className="font-bold text-white text-sm flex items-center gap-2">
-              <Plus className="w-4 h-4 text-purple-400" />
-              <span>Добавить новый серверный узел</span>
-            </h4>
-
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-              <div>
-                <label className="text-slate-400 mb-1 block">Тип узла:</label>
-                <select
-                  value={nodeType}
-                  onChange={e => {
-                    const t = e.target.value as 'entry' | 'exit';
-                    setNodeType(t);
-                    setNodeFlag(t === 'entry' ? '🇷🇺' : '🇩🇪');
-                  }}
-                  className="w-full bg-slate-950 text-white p-2 rounded-lg border border-slate-800"
-                >
-                  <option value="entry">🇷🇺 RU Entry (Вход)</option>
-                  <option value="exit">🇪🇺 EU Exit (Выход)</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="text-slate-400 mb-1 block">Название:</label>
-                <input
-                  type="text"
-                  placeholder="e.g. Москва-04"
-                  value={nodeName}
-                  onChange={e => setNodeName(e.target.value)}
-                  className="w-full bg-slate-950 text-white p-2 rounded-lg border border-slate-800"
-                />
-              </div>
-
-              <div>
-                <label className="text-slate-400 mb-1 block">Код (ID):</label>
-                <input
-                  type="text"
-                  placeholder="e.g. RU-04"
-                  value={nodeCode}
-                  onChange={e => setNodeCode(e.target.value)}
-                  className="w-full bg-slate-950 text-white p-2 rounded-lg border border-slate-800"
-                />
-              </div>
-
-              <div>
-                <label className="text-slate-400 mb-1 block">IP Адрес:</label>
-                <input
-                  type="text"
-                  placeholder="185.xxx.xxx.xxx"
-                  value={nodeIp}
-                  onChange={e => setNodeIp(e.target.value)}
-                  className="w-full bg-slate-950 text-white p-2 rounded-lg border border-slate-800"
-                />
-              </div>
-            </div>
-
-            <button
-              type="submit"
-              className="bg-purple-600 hover:bg-purple-500 text-white font-bold py-2 px-4 rounded-xl text-xs transition-colors"
-            >
-              Сохранить узел
-            </button>
-          </form>
-        </div>
-      )}
-
-      {/* TAB 2: ROUTE CASCADE BUILDER */}
-      {tab === 'routes' && (
-        <div className="space-y-6">
-          <div className="bg-slate-900/90 p-5 rounded-2xl border border-slate-800 space-y-4">
-            <h4 className="font-bold text-white text-sm flex items-center gap-2">
-              <Network className="w-5 h-5 text-purple-400" />
-              <span>Конструктор маршрутов каскадирования (RU ➔ EU)</span>
-            </h4>
-
-            <form onSubmit={handleCreateRoute} className="grid grid-cols-1 sm:grid-cols-4 gap-3 text-xs">
-              <div>
-                <label className="text-slate-400 mb-1 block">Название каскада:</label>
-                <input
-                  type="text"
-                  placeholder="e.g. Германия 2"
-                  value={routeName}
-                  onChange={e => setRouteName(e.target.value)}
-                  className="w-full bg-slate-950 text-white p-2.5 rounded-lg border border-slate-800"
-                />
-              </div>
-
-              <div>
-                <label className="text-slate-400 mb-1 block">Входной узел (RU):</label>
-                <select
-                  value={selectedEntryId}
-                  onChange={e => setSelectedEntryId(e.target.value)}
-                  className="w-full bg-slate-950 text-white p-2.5 rounded-lg border border-slate-800"
-                >
-                  {entryNodes.map(e => (
-                    <option key={e.id} value={e.id}>
-                      {e.flag} {e.name} ({e.code})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="text-slate-400 mb-1 block">Выходной узел (EU):</label>
-                <select
-                  value={selectedExitId}
-                  onChange={e => setSelectedExitId(e.target.value)}
-                  className="w-full bg-slate-950 text-white p-2.5 rounded-lg border border-slate-800"
-                >
-                  {exitNodes.map(e => (
-                    <option key={e.id} value={e.id}>
-                      {e.flag} {e.name} ({e.code})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="flex items-end">
-                <button
-                  type="submit"
-                  className="w-full bg-purple-600 hover:bg-purple-500 text-white font-bold py-2.5 px-4 rounded-lg text-xs transition-colors"
-                >
-                  Создать каскад
-                </button>
-              </div>
-            </form>
-          </div>
-
-          {/* Active Routes Table */}
-          <div className="bg-slate-900/90 p-5 rounded-2xl border border-slate-800 space-y-3">
-            <h4 className="font-bold text-white text-sm">Активные каскадные цепочки</h4>
-            <div className="space-y-2">
-              {cascadeRoutes.map(route => {
-                const entry = entryNodes.find(e => e.id === route.entryNodeId) || entryNodes[0];
-                const exit = exitNodes.find(e => e.id === route.exitNodeId) || exitNodes[0];
-
-                return (
-                  <div key={route.id} className="bg-slate-950 p-3.5 rounded-xl border border-slate-800 text-xs flex items-center justify-between">
-                    <div>
-                      <div className="font-bold text-white text-sm flex items-center gap-2">
-                        <span>{route.flag}</span>
-                        <span>{route.name}</span>
-                        <span className="text-slate-400 font-mono text-xs">({route.code})</span>
-                      </div>
-                      <div className="text-slate-400 mt-1 font-mono text-[11px]">
-                        Вход: <span className="text-cyan-400">{entry.name} ({entry.ip})</span> ➔ Выход: <span className="text-emerald-400">{exit.name} ({exit.ip})</span>
-                      </div>
-                    </div>
-
-                    <div className="text-right">
-                      <span className="bg-emerald-500/10 text-emerald-400 px-2 py-1 rounded font-mono font-bold">
-                        {route.totalPingMs} ms
-                      </span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm text-slate-300">
+              <thead className="bg-slate-950 text-slate-400">
+                <tr>
+                  <th className="px-4 py-3 rounded-tl-xl">Username</th>
+                  <th className="px-4 py-3">Статус</th>
+                  <th className="px-4 py-3">Истекает</th>
+                  <th className="px-4 py-3">Трафик</th>
+                  <th className="px-4 py-3 rounded-tr-xl">Ссылки</th>
+                </tr>
+              </thead>
+              <tbody>
+                {marzbanData && marzbanData.users ? (
+                  marzbanData.users.map((u: any) => (
+                    <tr key={u.username} className="border-b border-slate-800/50 hover:bg-slate-800/30">
+                      <td className="px-4 py-3 font-mono text-cyan-400">{u.username}</td>
+                      <td className="px-4 py-3">
+                        <span className={`px-2 py-1 rounded text-xs font-bold ${u.status === 'active' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'}`}>
+                          {u.status}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">{u.expire ? new Date(u.expire * 1000).toLocaleDateString() : '∞'}</td>
+                      <td className="px-4 py-3">{(u.used_traffic / 1073741824).toFixed(2)} GB / {u.data_limit ? (u.data_limit / 1073741824).toFixed(2) + ' GB' : '∞'}</td>
+                      <td className="px-4 py-3">
+                        {u.links && u.links.length > 0 ? (
+                          <button 
+                            onClick={() => {
+                               navigator.clipboard.writeText(u.links.join('\n'));
+                               alert('Ссылки скопированы!');
+                            }}
+                            className="bg-purple-600/20 text-purple-400 px-3 py-1 rounded-lg text-xs hover:bg-purple-600/40 transition-colors"
+                          >
+                            Копировать ({u.links.length})
+                          </button>
+                        ) : 'Нет'}
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={5} className="px-4 py-8 text-center text-slate-500">
+                      Нет данных или панель Marzban не подключена
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
           </div>
         </div>
       )}
 
-      {/* TAB 3: XRAY JSON CONFIG GENERATOR */}
-      {tab === 'xray' && (
-        <div className="space-y-6">
-          <div className="bg-slate-900/90 p-5 rounded-2xl border border-slate-800 space-y-4">
-            <h4 className="font-bold text-white text-sm">Генератор конфигурационных файлов Xray</h4>
-
-            <div className="flex flex-wrap items-center gap-3 text-xs">
-              <div>
-                <label className="text-slate-400 block mb-1">Выберите RU Entry узел:</label>
-                <select
-                  value={xrayEntryId}
-                  onChange={e => setXrayEntryId(e.target.value)}
-                  className="bg-slate-950 text-white p-2 rounded-lg border border-slate-800"
-                >
-                  {entryNodes.map(e => (
-                    <option key={e.id} value={e.id}>
-                      {e.flag} {e.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="text-slate-400 block mb-1">Выберите EU Exit узел:</label>
-                <select
-                  value={xrayExitId}
-                  onChange={e => setXrayExitId(e.target.value)}
-                  className="bg-slate-950 text-white p-2 rounded-lg border border-slate-800"
-                >
-                  {exitNodes.map(e => (
-                    <option key={e.id} value={e.id}>
-                      {e.flag} {e.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="pt-5">
-                <button
-                  onClick={fetchXrayConfigs}
-                  className="bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-4 rounded-lg flex items-center gap-1.5"
-                >
-                  <RefreshCw className="w-3.5 h-3.5" />
-                  <span>Сгенерировать</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Generated Code Blocks */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
-              {/* Entry Node Config */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="font-bold text-cyan-400 font-mono">/etc/xray/config.json (RU ENTRY)</span>
-                  <button
-                    onClick={() => handleCopyCode(generatedEntryJson, 'entry_json')}
-                    className="text-slate-400 hover:text-white flex items-center gap-1"
-                  >
-                    {copiedKey === 'entry_json' ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-                    <span>Копировать</span>
-                  </button>
-                </div>
-                <pre className="bg-slate-950 p-3 rounded-xl border border-slate-800 text-[11px] font-mono text-cyan-300 max-h-96 overflow-y-auto leading-tight">
-                  {generatedEntryJson || 'Загрузка...' }
-                </pre>
-              </div>
-
-              {/* Exit Node Config */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="font-bold text-emerald-400 font-mono">/etc/xray/config.json (EU EXIT)</span>
-                  <button
-                    onClick={() => handleCopyCode(generatedExitJson, 'exit_json')}
-                    className="text-slate-400 hover:text-white flex items-center gap-1"
-                  >
-                    {copiedKey === 'exit_json' ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-                    <span>Копировать</span>
-                  </button>
-                </div>
-                <pre className="bg-slate-950 p-3 rounded-xl border border-slate-800 text-[11px] font-mono text-emerald-300 max-h-96 overflow-y-auto leading-tight">
-                  {generatedExitJson || 'Загрузка...' }
-                </pre>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* TAB 4: DOCKER COMPOSE */}
-      {tab === 'docker' && (
-        <div className="space-y-4 bg-slate-900/90 p-5 rounded-2xl border border-slate-800">
-          <h4 className="font-bold text-white text-sm">Docker Compose Развертывание (Ubuntu 24.04)</h4>
-          <p className="text-xs text-slate-400">Скопируйте эти docker-compose файлы для развертывания Marzban + Backend и Xray Nodes:</p>
-
-          <div className="space-y-3">
-            <div className="space-y-1">
-              <div className="flex items-center justify-between text-xs">
-                <span className="font-mono text-amber-400 font-bold">docker-compose.yml (Management VPS)</span>
-                <button
-                  onClick={() => handleCopyCode(generateDockerComposeSnippet('master'), 'master_docker')}
-                  className="text-slate-400 hover:text-white flex items-center gap-1 text-xs"
-                >
-                  <Copy className="w-3.5 h-3.5" />
-                  <span>Копировать</span>
-                </button>
-              </div>
-              <pre className="bg-slate-950 p-3 rounded-xl border border-slate-800 text-[11px] font-mono text-slate-300 leading-tight">
-                {generateDockerComposeSnippet('master')}
-              </pre>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* TAB 5: PAYMENT SETTINGS & WALLETS */}
       {tab === 'payments' && (
         <div className="bg-slate-900/90 p-5 rounded-2xl border border-slate-800 space-y-5">
           <div className="flex items-center justify-between">
