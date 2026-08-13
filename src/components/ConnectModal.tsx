@@ -167,7 +167,7 @@ export const ConnectModal: React.FC<ConnectModalProps> = ({ subscription, isOpen
 
               <div>
                 <label className="text-xs font-medium text-slate-400 mb-1.5 block">
-                  Ваша персональная подписка (1-Click)
+                  Ваша персональная подписка Marzban (1-Click)
                 </label>
                 <div className="flex items-center gap-2 bg-slate-950 p-3 rounded-xl border border-slate-800">
                   <input
