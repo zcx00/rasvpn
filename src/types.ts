@@ -26,6 +26,7 @@ export interface VpnSubscription {
   activeDevicesCount: number;
   maxDevices: number;
   protocol?: string;
+  marzbanLinks?: string[];
 }
 
 export interface TariffPlan {

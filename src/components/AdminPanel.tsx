@@ -103,7 +103,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     setMarzbanStatus(null);
     try {
       const res = await fetch('/api/v1/admin/marzban/test', {
-        method: 'POST'
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: marzbanUrl, username: marzbanUser, password: marzbanPass })
       });
       const data = await res.json();
       if (data.success) {

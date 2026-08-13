@@ -69,6 +69,53 @@ async function startServer() {
     return data.access_token;
   }
 
+  // Helper for Marzban User Sync
+  async function syncMarzbanUser(plan, telegramId, expireDate) {
+    if (!marzbanConfig.url || !marzbanConfig.password) return [];
+    try {
+      const token = await getMarzbanToken();
+      const baseUrl = marzbanConfig.url.replace(/\/$/, "");
+      const username = `tg_${telegramId || Date.now()}`;
+      
+      let mUser;
+      const uRes = await fetch(`${baseUrl}/api/user/${username}`, { headers: { Authorization: `Bearer ${token}` } });
+      
+      if (uRes.ok) {
+         mUser = await uRes.json();
+         const updateRes = await fetch(`${baseUrl}/api/user/${username}`, {
+           method: "PUT",
+           headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+           body: JSON.stringify({
+             expire: Math.floor(expireDate.getTime() / 1000),
+             data_limit: plan.trafficLimitGb * 1073741824,
+             status: "active"
+           })
+         });
+         if (updateRes.ok) mUser = await updateRes.json();
+      } else {
+         const createRes = await fetch(`${baseUrl}/api/user`, {
+           method: "POST",
+           headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+           body: JSON.stringify({
+             username,
+             proxies: { "vless": {} },
+             inbounds: {},
+             expire: Math.floor(expireDate.getTime() / 1000),
+             data_limit: plan.trafficLimitGb * 1073741824,
+             data_limit_reset_strategy: "no_reset",
+             status: "active",
+             note: `Created via WebApp: ${plan.name}`
+           })
+         });
+         if (createRes.ok) mUser = await createRes.json();
+      }
+      return mUser && mUser.links ? mUser.links : [];
+    } catch(e) {
+      console.error("Marzban Sync Error:", e.message);
+      return [];
+    }
+  }
+
   let entryNodes = [...ENTRY_NODES];
   let exitNodes = [...EXIT_NODES];
   let cascadeRoutes = [...CASCADE_ROUTES];
@@ -197,13 +244,26 @@ async function startServer() {
       fs.writeFileSync(MARZBAN_FILE, JSON.stringify(marzbanConfig, null, 2));
     } catch(e) {}
 
-      res.json({
+    res.json({ success: true });
   });
 
   app.post("/api/v1/admin/marzban/test", async (req, res) => {
     try {
-      const token = await getMarzbanToken();
-      const baseUrl = marzbanConfig.url.replace(/\/$/, "");
+      const { url, username, password } = req.body;
+      const baseUrl = (url || marzbanConfig.url).replace(/\/$/, "");
+      const params = new URLSearchParams();
+      params.append("username", username || marzbanConfig.username);
+      params.append("password", password !== undefined ? password : marzbanConfig.password);
+      
+      const authRes = await fetch(`${baseUrl}/api/admin/token`, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: params.toString()
+      });
+      if (!authRes.ok) throw new Error("Marzban Auth Failed");
+      const tokenData = await authRes.json();
+      const token = tokenData.access_token;
+
       const systemRes = await fetch(`${baseUrl}/api/system`, { headers: { Authorization: `Bearer ${token}` } });
       res.json({ success: true, message: "Успешное подключение к Marzban!" });
     } catch (err: any) {
@@ -272,11 +332,16 @@ async function startServer() {
       status: 'active',
     };
 
+    // Marzban Sync
     if (currentUser && currentUser.telegramId) {
+      const marzbanLinks = await syncMarzbanUser(plan, currentUser.telegramId, expireDate);
+      if (marzbanLinks.length > 0) {
+        currentSubscription.marzbanLinks = marzbanLinks;
+      }
       userSubscriptions.set(String(currentUser.telegramId), currentSubscription);
     }
 
-      res.json({
+    res.json({
       success: true,
       message: `Подписка на ${plan.name} успешно оформлена!`,
       subscription: currentSubscription,
@@ -419,7 +484,7 @@ async function startServer() {
   });
 
   // Check or Confirm Invoice Payment Status
-  app.post('/api/v1/payment/check-status', (req, res) => {
+  app.post('/api/v1/payment/check-status', async (req, res) => {
     const { invoiceId, txHash } = req.body;
     let invoice = invoicesStore.get(invoiceId);
 
@@ -450,11 +515,16 @@ async function startServer() {
       status: 'active',
     };
 
+    // Marzban Sync
     if (currentUser && currentUser.telegramId) {
+      const marzbanLinks = await syncMarzbanUser(plan, currentUser.telegramId, newExpire);
+      if (marzbanLinks.length > 0) {
+        currentSubscription.marzbanLinks = marzbanLinks;
+      }
       userSubscriptions.set(String(currentUser.telegramId), currentSubscription);
     }
 
-      res.json({
+    res.json({
       success: true,
       status: 'paid',
       message: '🎉 Оплата успешно подтверждена! Подписка активна.',
@@ -464,7 +534,7 @@ async function startServer() {
   });
 
   // Webhook for CryptoBot / Cryptomus Webhook Events
-  app.post('/api/v1/payment/webhook', (req, res) => {
+  app.post('/api/v1/payment/webhook', async (req, res) => {
     const body = req.body;
     console.log('Received payment webhook:', body);
 
@@ -488,6 +558,14 @@ async function startServer() {
         trafficLimitGb: plan.trafficLimitGb,
         status: 'active',
       };
+      
+      if (currentUser && currentUser.telegramId) {
+        const marzbanLinks = await syncMarzbanUser(plan, currentUser.telegramId, newExpire);
+        if (marzbanLinks.length > 0) {
+          currentSubscription.marzbanLinks = marzbanLinks;
+        }
+        userSubscriptions.set(String(currentUser.telegramId), currentSubscription);
+      }
     }
 
       res.json({
@@ -569,7 +647,6 @@ async function startServer() {
 
   // Admin: Get / Update Cascade Routes
   app.get("/api/v1/admin/routes", (req, res) => {    res.json({ cascadeRoutes });  });
-  });
 
   app.post('/api/v1/admin/routes', (req, res) => {
     const { name, entryNodeId, exitNodeId, flag } = req.body;
