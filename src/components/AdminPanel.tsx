@@ -288,7 +288,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                 </tr>
               </thead>
               <tbody>
-                {marzbanData && marzbanData.users ? (
+                {marzbanData && marzbanData.users && Array.isArray(marzbanData.users) ? (
                   marzbanData.users.map((u: any) => (
                     <tr key={u.username} className="border-b border-slate-800/50 hover:bg-slate-800/30">
                       <td className="px-4 py-3 font-mono text-cyan-400">{u.username}</td>

@@ -282,7 +282,10 @@ async function startServer() {
 
       const usersRes = await fetch(`${baseUrl}/api/users`, { headers: { Authorization: `Bearer ${token}` } });
       let usersData = [];
-      if (usersRes.ok) usersData = await usersRes.json();
+      if (usersRes.ok) {
+        const d = await usersRes.json();
+        usersData = Array.isArray(d) ? d : (d.users || []);
+      }
 
       const nodesRes = await fetch(`${baseUrl}/api/nodes`, { headers: { Authorization: `Bearer ${token}` } });
       let nodesData = [];
