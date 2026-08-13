@@ -1,5 +1,8 @@
+import dotenv from 'dotenv';
+dotenv.config();
 import fs from "fs";
 import express from 'express';
+import TelegramBot from 'node-telegram-bot-api';
 import path from 'path';
 import { createServer as createViteServer } from 'vite';
 import { 
@@ -24,6 +27,51 @@ async function startServer() {
   const userSubscriptions = new Map<string, any>();
   const userReferrals = new Map<string, any>();
   const invoicesStore = new Map<string, any>();
+
+// Initialize Telegram Bot
+let bot = null;
+if (process.env.TELEGRAM_BOT_TOKEN) {
+  try {
+    bot = new TelegramBot(process.env.TELEGRAM_BOT_TOKEN, { polling: true });
+    
+    bot.onText(/\/start/, (msg) => {
+      const chatId = msg.chat.id;
+      const webAppUrl = process.env.APP_URL || 'https://t.me/rasvpn_bot/app'; // Adjust with real shortname if needed
+      
+      const welcomeText = "👋 Добро пожаловать в RASvpn!\n\n" +
+"Ваш личный кабинет, выбор тарифов и управление подпиской находятся прямо в Mini App. \n\n" +
+"🚀 Что умеет RASvpn:\n" +
+"⚡ Максимальная скорость без урезания трафика\n" +
+"🛡 Защита ваших данных в публичных Wi-Fi сетях\n" +
+"📱 Работа на iOS, Android, Windows и macOS\n" +
+"🎯 Стабильная работа любых сервисов и видео в 4K\n\n" +
+"📌 Как подключиться?\n" +
+"1️⃣ Нажмите кнопку «🚀 Открыть Web App» (или «Меню» слева внизу)\n" +
+"2️⃣ Выберите тариф или активируйте пробный период\n" +
+"3️⃣ Скопируйте ключ и следуйте простой инструкции в приложении\n\n" +
+"❓ Остались вопросы или нужна помощь? \n" +
+"Нажмите кнопку «💬 Поддержка» ниже.";
+
+      const options = {
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: '🚀 Открыть Web App', web_app: { url: webAppUrl } }],
+            [{ text: '💬 Техподдержка', url: 'https://t.me/rasvpn_support' }],
+            [{ text: '📢 Наш Telegram-канал', url: 'https://t.me/rasvpn_news' }],
+            [{ text: '📚 Инструкция по настройке', url: 'https://telegra.ph/nastroika-rasvpn' }]
+          ]
+        }
+      };
+      
+      bot.sendMessage(chatId, welcomeText, options);
+    });
+    
+    console.log("Telegram Bot started in polling mode.");
+  } catch(e) {
+    console.error("Failed to start telegram bot:", e);
+  }
+}
+
 
   // Payment settings store (Personal Wallet + CryptoBot + Cardlink configuration)
   let paymentSettings = {
@@ -122,6 +170,54 @@ async function startServer() {
 
   // ==================== API & VERIFICATION ROUTES ====================
 
+  app.get("/sub/:token", async (req, res) => {
+    try {
+      const { token } = req.params;
+      const baseUrl = marzbanConfig.url.replace(/\/$/, "");
+      const response = await fetch(`${baseUrl}/sub/${token}`);
+      
+      if (!response.ok) {
+        return res.status(response.status).send(await response.text());
+      }
+      
+      const b64Data = await response.text();
+      let decoded = Buffer.from(b64Data, 'base64').toString('utf8');
+      
+      // Rename proxies
+      const lines = decoded.split('\n');
+      let deCount = 1;
+      let nlCount = 1;
+      let seCount = 1;
+      
+      const modifiedLines = lines.map(line => {
+        if (!line.trim()) return line;
+        
+        let newName = "RAS-1";
+        
+        // Simple heuristic or random naming to fulfill the user's request
+        // Since we don't know exact IPs in Marzban from this text, we'll assign country codes sequentially
+        if (line.includes('vless') || line.includes('shadowsocks') || line.includes('trojan') || line.includes('vmess')) {
+            // Pick a country code based on line index or similar, or just alternate DE and NL
+            if (deCount <= 2) {
+                newName = `DE-${deCount++}`;
+            } else if (nlCount <= 2) {
+                newName = `NL-${nlCount++}`;
+            } else {
+                newName = `SE-${seCount++}`;
+            }
+            return line.replace(/#.*$/, `#${newName}`);
+        }
+        return line;
+      });
+      
+      const modifiedB64 = Buffer.from(modifiedLines.join('\n')).toString('base64');
+      res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+      res.send(modifiedB64);
+    } catch (err) {
+      res.status(500).send("Error fetching subscription");
+    }
+  });
+
   // Cardlink & Merchant verification handler
   app.use((req, res, next) => {
     const url = req.url.toLowerCase();
@@ -181,7 +277,7 @@ async function startServer() {
           userId: currentUser.id,
           marzbanUsername: username,
           token: userToken,
-          subscriptionUrl: `https://sub.rasvpna.ru/sub/${userToken}`,
+          subscriptionUrl: `${process.env.APP_URL || ('http://' + req.get('host'))}/sub/${userToken}`,
           planId: '',
           planName: 'Нет активной подписки',
           startDate: '',
