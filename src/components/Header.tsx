@@ -13,12 +13,7 @@ export const Header: React.FC<HeaderProps> = ({ user, activeView, onViewChange }
   const [isPinModalOpen, setIsPinModalOpen] = useState(false);
   const [adminPin, setAdminPin] = useState('');
   const [pinError, setPinError] = useState(false);
-  const [isUnlocked, setIsUnlocked] = useState(() => {
-    return typeof window !== 'undefined' && (
-      localStorage.getItem('ras_admin_unlocked') === 'true' ||
-      window.location.search.includes('admin=true')
-    );
-  });
+  const [isUnlocked, setIsUnlocked] = useState(false);
 
   const handleLogoClick = () => {
     const nextCount = clickCount + 1;
@@ -36,8 +31,7 @@ export const Header: React.FC<HeaderProps> = ({ user, activeView, onViewChange }
 
   const handlePinSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (adminPin === 'admin' || adminPin === '7777' || adminPin === '2026') {
-      localStorage.setItem('ras_admin_unlocked', 'true');
+    if (adminPin === '1969111izi,') {
       setIsUnlocked(true);
       setIsPinModalOpen(false);
       setAdminPin('');
