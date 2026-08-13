@@ -38,6 +38,29 @@ async function startServer() {
 
   let currentUser = { ...INITIAL_USER };
   let currentSubscription = { ...INITIAL_SUBSCRIPTION };
+
+  // Marzban Config
+  let marzbanConfig = {
+    url: "http://89.22.225.206:8080",
+    username: "admin",
+    password: ""
+  };
+
+  async function getMarzbanToken() {
+    const baseUrl = marzbanConfig.url.replace(/\/$/, "");
+    const params = new URLSearchParams();
+    params.append("username", marzbanConfig.username);
+    params.append("password", marzbanConfig.password);
+    const res = await fetch(`${baseUrl}/api/admin/token`, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: params.toString()
+    });
+    if (!res.ok) throw new Error("Marzban Auth Failed");
+    const data = await res.json();
+    return data.access_token;
+  }
+
   let entryNodes = [...ENTRY_NODES];
   let exitNodes = [...EXIT_NODES];
   let cascadeRoutes = [...CASCADE_ROUTES];
@@ -152,6 +175,30 @@ async function startServer() {
   });
 
   // Servers & Cascade Routes
+  // Marzban API
+  app.get("/api/v1/admin/marzban", (req, res) => {
+    res.json(marzbanConfig);
+  });
+
+  app.post("/api/v1/admin/marzban", (req, res) => {
+    const { url, username, password } = req.body;
+    if (url) marzbanConfig.url = url;
+    if (username) marzbanConfig.username = username;
+    if (password !== undefined) marzbanConfig.password = password;
+    res.json({ success: true, marzbanConfig });
+  });
+
+  app.post("/api/v1/admin/marzban/test", async (req, res) => {
+    try {
+      const token = await getMarzbanToken();
+      const baseUrl = marzbanConfig.url.replace(/\/$/, "");
+      const systemRes = await fetch(`${baseUrl}/api/system`, { headers: { Authorization: `Bearer ${token}` } });
+      res.json({ success: true, message: "Успешное подключение к Marzban!" });
+    } catch (err: any) {
+      res.status(400).json({ success: false, error: err.message || "Ошибка подключения" });
+    }
+  });
+
   app.get('/api/v1/servers', (req, res) => {
     res.json({
       entryNodes,

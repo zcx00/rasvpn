@@ -20,7 +20,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   onAddNode,
   onAddRoute,
 }) => {
-  const [tab, setTab] = useState<'nodes' | 'routes' | 'xray' | 'docker' | 'payments'>('nodes');
+  const [tab, setTab] = useState<'nodes' | 'routes' | 'xray' | 'docker' | 'payments' | 'marzban'>('nodes');
 
   // Payment Settings State
   const [cardlinkShopId, setCardlinkShopId] = useState('');
@@ -53,6 +53,56 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   const [generatedEntryJson, setGeneratedEntryJson] = useState<string>('');
   const [generatedExitJson, setGeneratedExitJson] = useState<string>('');
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
+
+  // Marzban State
+  const [marzbanUrl, setMarzbanUrl] = useState('http://89.22.225.206:8080');
+  const [marzbanUser, setMarzbanUser] = useState('admin');
+  const [marzbanPass, setMarzbanPass] = useState('');
+  const [marzbanStatus, setMarzbanStatus] = useState<string | null>(null);
+  const [isTestingMarzban, setIsTestingMarzban] = useState(false);
+
+  React.useEffect(() => {
+    fetch('/api/v1/admin/marzban')
+      .then(res => res.json())
+      .then(data => {
+        if (data.url) setMarzbanUrl(data.url);
+        if (data.username) setMarzbanUser(data.username);
+        if (data.password) setMarzbanPass(data.password);
+      })
+      .catch(() => {});
+  }, []);
+
+  const handleSaveMarzban = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await fetch('/api/v1/admin/marzban', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: marzbanUrl, username: marzbanUser, password: marzbanPass })
+      });
+      setMarzbanStatus('Настройки сохранены');
+      setTimeout(() => setMarzbanStatus(null), 3000);
+    } catch {}
+  };
+
+  const handleTestMarzban = async () => {
+    setIsTestingMarzban(true);
+    setMarzbanStatus(null);
+    try {
+      const res = await fetch('/api/v1/admin/marzban/test', {
+        method: 'POST'
+      });
+      const data = await res.json();
+      if (data.success) {
+        setMarzbanStatus('Успешное подключение к Marzban!');
+      } else {
+        setMarzbanStatus(data.error || 'Ошибка подключения');
+      }
+    } catch {
+      setMarzbanStatus('Сбой запроса');
+    }
+    setIsTestingMarzban(false);
+  };
 
   const handleCopyCode = (text: string, key: string) => {
     navigator.clipboard.writeText(text);
@@ -196,6 +246,16 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
             tab === 'xray' ? 'bg-purple-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-200'
           }`}
         >
+        <button
+          onClick={() => setTab("marzban")}
+          className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-all ${
+            tab === "marzban" ? "bg-purple-600 text-white shadow-md" : "text-slate-400 hover:text-slate-200"
+          }`}
+        >
+          <Server className="w-4 h-4" />
+          <span>Marzban Integration</span>
+        </button>
+
           <FileCode className="w-4 h-4" />
           <span>Xray JSON Конфиги</span>
         </button>
@@ -728,6 +788,87 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                 </>
               )}
             </button>
+          </form>
+        </div>
+      )}
+      {tab === 'marzban' && (
+        <div className="bg-slate-900/90 p-5 rounded-2xl border border-slate-800 space-y-5">
+          <div className="flex items-center gap-2 text-cyan-400 font-semibold mb-4">
+            <Server className="w-5 h-5" />
+            <span>Интеграция с Marzban Panel</span>
+          </div>
+          <p className="text-xs text-slate-400">
+            Подключите веб-приложение к вашей панели Marzban для автоматической выдачи подписок (VLESS + Reality) и синхронизации серверов. 
+            После настройки все узлы из Marzban могут автоматически добавляться в клиентские приложения.
+          </p>
+
+          <form onSubmit={handleSaveMarzban} className="space-y-4">
+            <div>
+              <label className="block text-xs font-medium text-slate-300 mb-1">
+                URL панели Marzban (например: http://89.22.225.206:8080)
+              </label>
+              <input
+                type="text"
+                value={marzbanUrl}
+                onChange={(e) => setMarzbanUrl(e.target.value)}
+                placeholder="http://89.22.225.206:8080"
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-cyan-500 font-mono"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-medium text-slate-300 mb-1">
+                  Логин администратора
+                </label>
+                <input
+                  type="text"
+                  value={marzbanUser}
+                  onChange={(e) => setMarzbanUser(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-cyan-500"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-300 mb-1">
+                  Пароль администратора
+                </label>
+                <input
+                  type="password"
+                  value={marzbanPass}
+                  onChange={(e) => setMarzbanPass(e.target.value)}
+                  placeholder="Введите пароль..."
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-cyan-500"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-3 pt-2">
+              <button
+                type="submit"
+                className="flex-1 bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-xs py-2.5 px-4 rounded-xl transition-all shadow-lg shadow-cyan-600/20"
+              >
+                Сохранить настройки
+              </button>
+              <button
+                type="button"
+                onClick={handleTestMarzban}
+                disabled={isTestingMarzban}
+                className="bg-slate-800 hover:bg-slate-700 disabled:opacity-50 text-white font-bold text-xs py-2.5 px-4 rounded-xl transition-all flex items-center justify-center gap-2"
+              >
+                <RefreshCw className={`w-4 h-4 ${isTestingMarzban ? 'animate-spin' : ''}`} />
+                <span>Проверить связь</span>
+              </button>
+            </div>
+
+            {marzbanStatus && (
+              <div className={`mt-3 p-3 rounded-xl border text-xs font-medium ${
+                marzbanStatus.includes('Успешное') ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' :
+                marzbanStatus.includes('сохранены') ? 'bg-blue-500/10 border-blue-500/30 text-blue-400' :
+                'bg-rose-500/10 border-rose-500/30 text-rose-400'
+              }`}>
+                {marzbanStatus}
+              </div>
+            )}
           </form>
         </div>
       )}
