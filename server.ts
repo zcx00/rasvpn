@@ -2,7 +2,8 @@ import dotenv from 'dotenv';
 dotenv.config();
 import fs from "fs";
 import express from 'express';
-const TelegramBot = require('node-telegram-bot-api');
+import TelegramBotPkg from 'node-telegram-bot-api';
+const TelegramBot = (TelegramBotPkg as any).default || (TelegramBotPkg as any).TelegramBot || TelegramBotPkg;
 import path from 'path';
 import { createServer as createViteServer } from 'vite';
 import { 
