@@ -38,7 +38,7 @@ export const PrivacyPolicy = () => {
 
       <section className="space-y-3">
         <h2 className="text-xl font-semibold text-cyan-400">5. Контакты</h2>
-        <p>По всем вопросам, связанным с Политикой конфиденциальности, обращайтесь в нашу службу поддержки: <a href="https://t.me/rasvpn_manager" className="text-cyan-400 hover:underline">@rasvpn_manager</a></p>
+        <p>По всем вопросам, связанным с Политикой конфиденциальности, обращайтесь в нашу службу поддержки: <a href="https://t.me/zcx002" className="text-cyan-400 hover:underline">@zcx002</a></p>
       </section>
     </div>
   );
@@ -75,8 +75,15 @@ export const TermsOfService = () => {
       </section>
 
       <section className="space-y-3">
-        <h2 className="text-xl font-semibold text-cyan-400">4. Оплата и возврат средств</h2>
-        <p>Услуги оплачиваются авансовым платежом в соответствии с выбранным тарифом. В случае технических проблем на нашей стороне, которые мы не смогли решить в течение 48 часов, мы предоставляем возврат средств за неиспользованный период.</p>
+        <h2 className="text-xl font-semibold text-cyan-400">4. Оплата, цены и тарифы</h2>
+        <p>Услуги оплачиваются авансовым платежом в соответствии с выбранным тарифом. Актуальные цены на услуги VPN:</p>
+        <ul className="list-disc pl-5 space-y-1 mb-2">
+          <li><strong>Тариф «1 Месяц»</strong> — 149 рублей (Срок: 30 дней, Лимит трафика: 300 ГБ, доступ ко всем локациям).</li>
+          <li><strong>Тариф «3 Месяца»</strong> — 399 рублей (Срок: 90 дней, Лимит трафика: 800 ГБ).</li>
+          <li><strong>Тариф «1 Год (VIP)»</strong> — 1290 рублей (Срок: 365 дней, Лимит трафика: 2000 ГБ).</li>
+        </ul>
+        <p>Оплата производится в российских рублях. Пользователь получает доступ к услуге (предоставление уникального ключа подключения) сразу после успешной транзакции.</p>
+        <p><strong>Возврат средств:</strong> В случае технических проблем на нашей стороне (недоступность серверов), которые мы не смогли решить в течение 48 часов, мы предоставляем возврат средств пропорционально неиспользованному периоду.</p>
       </section>
 
       <section className="space-y-3">
@@ -86,7 +93,7 @@ export const TermsOfService = () => {
       
       <section className="space-y-3">
         <h2 className="text-xl font-semibold text-cyan-400">6. Контакты поддержки</h2>
-        <p>Если у вас возникли вопросы или проблемы, свяжитесь с нами: <a href="https://t.me/rasvpn_manager" className="text-cyan-400 hover:underline">@rasvpn_manager</a></p>
+        <p>Если у вас возникли вопросы или проблемы, свяжитесь с нами: <a href="https://t.me/zcx002" className="text-cyan-400 hover:underline">@zcx002</a></p>
       </section>
     </div>
   );
