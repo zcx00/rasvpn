@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { UserProfile, VpnSubscription, EntryNode, ExitNode, CascadeRoute, TariffPlan, ReferralStat, SystemStats } from './types';
+import { PrivacyPolicy, TermsOfService } from './components/LegalPages';
 import { 
   INITIAL_USER, 
   INITIAL_SUBSCRIPTION, 
@@ -47,7 +48,16 @@ declare global {
 }
 
 export default function App() {
-  const [activeView, setActiveView] = useState<'app' | 'sub' | 'admin'>('app');
+  const [activeView, setActiveView] = useState<'app' | 'sub' | 'admin' | 'privacy' | 'terms'>(() => {
+    const path = window.location.pathname;
+    if (path.startsWith('/admin')) return 'admin';
+    if (path.startsWith('/sub')) return 'sub';
+    if (path.startsWith('/privacy')) return 'privacy';
+    if (path.startsWith('/terms')) return 'terms';
+    if (window.location.hostname.startsWith('sub.')) return 'sub';
+    if (window.location.hostname.startsWith('admin.')) return 'admin';
+    return 'app';
+  });
   const [appTab, setAppTab] = useState<'main' | 'plans' | 'referrals'>('main');
 
   // Application state
@@ -383,9 +393,9 @@ export default function App() {
           {/* Legal Footer */}
           <div className="mt-8 pt-6 border-t border-slate-800 text-center text-[10px] text-slate-500 space-y-3">
             <div className="flex flex-wrap justify-center gap-3">
-              <a href="https://telegra.ph/Polzovatelskoe-soglashenie-08-01-39" target="_blank" rel="noreferrer" className="hover:text-cyan-400 transition-colors">Пользовательское соглашение</a>
+              <a href="/terms" target="_blank" rel="noreferrer" className="hover:text-cyan-400 transition-colors">Пользовательское соглашение</a>
               <span>&bull;</span>
-              <a href="https://telegra.ph/Politika-konfidencialnosti-08-01-83" target="_blank" rel="noreferrer" className="hover:text-cyan-400 transition-colors">Политика конфиденциальности</a>
+              <a href="/privacy" target="_blank" rel="noreferrer" className="hover:text-cyan-400 transition-colors">Политика конфиденциальности</a>
               <span>&bull;</span>
               <a href="https://t.me/rasvpn_manager" target="_blank" rel="noreferrer" className="hover:text-cyan-400 transition-colors">Поддержка</a>
             </div>
@@ -414,6 +424,18 @@ export default function App() {
       {/* VIEW 2: SUB LANDING WEB PAGE (sub.rasvpna.ru) */}
       {activeView === 'sub' && (
         <SubscriptionWebPage subscription={subscription} />
+      )}
+
+      {/* LEGAL VIEWS */}
+      {activeView === 'privacy' && (
+        <main className="min-h-screen bg-slate-950 py-10">
+          <PrivacyPolicy />
+        </main>
+      )}
+      {activeView === 'terms' && (
+        <main className="min-h-screen bg-slate-950 py-10">
+          <TermsOfService />
+        </main>
       )}
 
       {/* VIEW 3: ADMIN PANEL (admin.rasvpna.ru) */}
