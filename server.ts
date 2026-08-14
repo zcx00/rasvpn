@@ -60,8 +60,8 @@ if (process.env.TELEGRAM_BOT_TOKEN) {
         reply_markup: {
           inline_keyboard: [
             [{ text: '🚀 Открыть Web App', web_app: { url: appHost } }],
-            [{ text: '💬 Техподдержка', url: 'https://t.me/rasvpn_manager' }],
-            [{ text: '📚 Инструкция', url: 'https://telegra.ph/nastroika-rasvpn' }],
+            [{ text: '💬 Техподдержка', url: 'https://t.me/zcx002' }],
+            [{ text: '📚 Инструкция', url: 'https://telegra.ph/Kak-podklyuchit-RAS-VPN-08-14' }],
             [{ text: '📜 Пользовательское соглашение', url: `${baseDomain}/terms` }],
             [{ text: '🔐 Политика конфиденциальности', url: `${baseDomain}/privacy` }]
           ]
