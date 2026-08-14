@@ -397,7 +397,7 @@ export default function App() {
               <span>&bull;</span>
               <a href="/privacy" target="_blank" rel="noreferrer" className="hover:text-cyan-400 transition-colors">Политика конфиденциальности</a>
               <span>&bull;</span>
-              <a href="https://t.me/rasvpn_manager" target="_blank" rel="noreferrer" className="hover:text-cyan-400 transition-colors">Поддержка</a>
+              <a href="https://t.me/zcx002" target="_blank" rel="noreferrer" className="hover:text-cyan-400 transition-colors">Поддержка</a>
             </div>
             <div className="opacity-50">
               VPN сервис RASvpn. Кодовое слово: plat chek
