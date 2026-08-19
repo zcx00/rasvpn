@@ -39,6 +39,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   const [cardlinkShopId, setCardlinkShopId] = useState('');
   const [cardlinkApiKey, setCardlinkApiKey] = useState('');
   const [cryptoBotToken, setCryptoBotToken] = useState('');
+  const [plategaMerchantId, setPlategaMerchantId] = useState('');
+  const [plategaApiKey, setPlategaApiKey] = useState('');
   const [walletTrc20, setWalletTrc20] = useState('TQn9Y2khEsLJW1ChV3o4e94J84k9L0m1aX');
   const [walletTon, setWalletTon] = useState('EQD12aX9vK8z_ExampleTonAddressForRASVPN');
   const [alfaAccount, setAlfaAccount] = useState('40817810505901273664');
@@ -166,6 +168,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
       const data = await res.json();
       if (data) {
         if (data.cardlinkShopId) setCardlinkShopId(data.cardlinkShopId);
+        if (data.plategaMerchantId) setPlategaMerchantId(data.plategaMerchantId);
         if (data.walletTrc20) setWalletTrc20(data.walletTrc20);
         if (data.walletTon) setWalletTon(data.walletTon);
         if (data.alfaAccount) setAlfaAccount(data.alfaAccount);
@@ -187,6 +190,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
           cardlinkShopId,
           cardlinkApiKey,
           cryptoBotToken,
+          plategaMerchantId,
+          plategaApiKey,
           walletTrc20,
           walletTon,
           alfaAccount,
@@ -385,6 +390,48 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                     placeholder="Ваш секретный API ключ Cardlink"
                     value={cardlinkApiKey}
                     onChange={e => setCardlinkApiKey(e.target.value)}
+                    className="w-full bg-slate-900 border border-slate-800 rounded-lg p-2.5 text-xs text-white font-mono focus:border-cyan-500 outline-none"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Platega.io API Integration */}
+            <div className="bg-slate-950 p-4 rounded-xl border border-blue-500/30 space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-white flex items-center gap-1.5">
+                  <span>💳 Платежный эквайринг Platega.io</span>
+                </label>
+                <a
+                  href="https://platega.io"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[11px] text-cyan-400 hover:underline flex items-center gap-1"
+                >
+                  Личный кабинет Platega ➔
+                </a>
+              </div>
+              <p className="text-[11px] text-slate-400">
+                Прием банковских карт РФ, СБП.
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                <div>
+                  <label className="text-[11px] text-slate-400 mb-1 block">Platega Merchant ID (ID мерчанта)</label>
+                  <input
+                    type="text"
+                    placeholder="Например: 2b4657e8-0b0c..."
+                    value={plategaMerchantId}
+                    onChange={e => setPlategaMerchantId(e.target.value)}
+                    className="w-full bg-slate-900 border border-slate-800 rounded-lg p-2.5 text-xs text-white font-mono focus:border-cyan-500 outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="text-[11px] text-slate-400 mb-1 block">Platega API Key (API ключ)</label>
+                  <input
+                    type="password"
+                    placeholder="Ваш API ключ Platega"
+                    value={plategaApiKey}
+                    onChange={e => setPlategaApiKey(e.target.value)}
                     className="w-full bg-slate-900 border border-slate-800 rounded-lg p-2.5 text-xs text-white font-mono focus:border-cyan-500 outline-none"
                   />
                 </div>

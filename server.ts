@@ -83,6 +83,8 @@ if (process.env.TELEGRAM_BOT_TOKEN) {
     cardlinkShopId: process.env.CARDLINK_SHOP_ID || '',
     cardlinkApiKey: process.env.CARDLINK_API_KEY || '',
     cryptoBotToken: process.env.CRYPTOBOT_API_TOKEN || '',
+    plategaMerchantId: process.env.PLATEGA_MERCHANT_ID || '2b4657e8-0b0c-45c1-aa8c-886439001ac2',
+    plategaApiKey: process.env.PLATEGA_API_KEY || '',
     walletTrc20: process.env.MERCHANT_WALLET_TRC20 || 'TQn9Y2khEsLJW1ChV3o4e94J84k9L0m1aX',
     walletTon: process.env.MERCHANT_WALLET_TON || 'EQD12aX9vK8z_ExampleTonAddressForRASVPN',
     alfaAccount: process.env.ALFA_ACCOUNT_NUM || '40817810505901273664',
@@ -460,6 +462,8 @@ if (process.env.TELEGRAM_BOT_TOKEN) {
       res.json({
       cardlinkShopId: paymentSettings.cardlinkShopId,
       hasCardlink: Boolean(paymentSettings.cardlinkShopId && paymentSettings.cardlinkApiKey),
+      plategaMerchantId: paymentSettings.plategaMerchantId,
+      hasPlatega: Boolean(paymentSettings.plategaMerchantId && paymentSettings.plategaApiKey),
       walletTrc20: paymentSettings.walletTrc20,
       walletTon: paymentSettings.walletTon,
       alfaAccount: paymentSettings.alfaAccount,
@@ -470,10 +474,12 @@ if (process.env.TELEGRAM_BOT_TOKEN) {
 
   // Update Admin Payment Settings
   app.post('/api/v1/admin/payment-settings', (req, res) => {
-    const { cardlinkShopId, cardlinkApiKey, cryptoBotToken, walletTrc20, walletTon, alfaAccount, alfaRecipient } = req.body;
+    const { cardlinkShopId, cardlinkApiKey, cryptoBotToken, plategaMerchantId, plategaApiKey, walletTrc20, walletTon, alfaAccount, alfaRecipient } = req.body;
     if (cardlinkShopId !== undefined) paymentSettings.cardlinkShopId = cardlinkShopId;
     if (cardlinkApiKey !== undefined) paymentSettings.cardlinkApiKey = cardlinkApiKey;
     if (cryptoBotToken !== undefined) paymentSettings.cryptoBotToken = cryptoBotToken;
+    if (plategaMerchantId !== undefined) paymentSettings.plategaMerchantId = plategaMerchantId;
+    if (plategaApiKey !== undefined) paymentSettings.plategaApiKey = plategaApiKey;
     if (walletTrc20 !== undefined) paymentSettings.walletTrc20 = walletTrc20;
     if (walletTon !== undefined) paymentSettings.walletTon = walletTon;
     if (alfaAccount !== undefined) paymentSettings.alfaAccount = alfaAccount;
@@ -486,7 +492,7 @@ if (process.env.TELEGRAM_BOT_TOKEN) {
     });
   });
 
-  // Create Crypto, Cardlink or Direct Invoice
+  // Create Crypto, Cardlink, Platega or Direct Invoice
   app.post('/api/v1/payment/create-invoice', async (req, res) => {
     const { planId, method } = req.body;
     const plan = TARIFF_PLANS.find(p => p.id === planId) || TARIFF_PLANS[1];
@@ -501,6 +507,35 @@ if (process.env.TELEGRAM_BOT_TOKEN) {
     let cardlinkUrl = paymentSettings.cardlinkShopId
       ? `https://cardlink.link/bill/create?shop_id=${paymentSettings.cardlinkShopId}&amount=${amountRub}&order_id=${invoiceId}`
       : `https://cardlink.link/bill/${invoiceId}`;
+    let plategaUrl = '';
+
+    // Platega API integration
+    if (paymentSettings.plategaMerchantId && paymentSettings.plategaApiKey) {
+      try {
+        const plategaRes = await fetch('https://api.platega.io/v1/payments', {
+          method: 'POST',
+          headers: {
+            'X-API-KEY': paymentSettings.plategaApiKey,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            merchantId: paymentSettings.plategaMerchantId,
+            amount: amountRub,
+            currency: 'RUB',
+            orderId: invoiceId,
+            description: `Подписка RAS VPN: ${plan.name} (${plan.durationDays} дней)`,
+            successUrl: `${process.env.APP_URL || ''}/?payment=success`,
+            failUrl: `${process.env.APP_URL || ''}/?payment=failed`,
+          }),
+        });
+        const plategaData = await plategaRes.json();
+        if (plategaData?.url) {
+          plategaUrl = plategaData.url;
+        }
+      } catch (err) {
+        console.warn('Platega API call fallback:', err);
+      }
+    }
 
     // If real Cardlink API key & shop_id provided, create bill via Cardlink REST API
     if (paymentSettings.cardlinkShopId && paymentSettings.cardlinkApiKey) {
@@ -570,6 +605,7 @@ if (process.env.TELEGRAM_BOT_TOKEN) {
       amountTon,
       payUrl,
       cardlinkUrl,
+      plategaUrl,
       walletTrc20: paymentSettings.walletTrc20,
       walletTon: paymentSettings.walletTon,
       memoCode,
@@ -637,13 +673,16 @@ if (process.env.TELEGRAM_BOT_TOKEN) {
     });
   });
 
-  // Webhook for CryptoBot / Cryptomus Webhook Events
+  // Webhook for Platega / CryptoBot / Cryptomus Webhook Events
   app.post('/api/v1/payment/webhook', async (req, res) => {
     const body = req.body;
     console.log('Received payment webhook:', body);
 
-    const invoiceId = body?.payload || body?.invoice_id || body?.order_id;
-    if (invoiceId && invoicesStore.has(invoiceId)) {
+    // Поддержка различных форматов (в т.ч. Platega)
+    const invoiceId = body?.order_id || body?.id || body?.payload || body?.invoice_id;
+    const isSuccess = body?.status === 'CONFIRMED' || body?.status === 'paid' || body?.status === 'success';
+
+    if (invoiceId && invoicesStore.has(invoiceId) && isSuccess) {
       const invoice = invoicesStore.get(invoiceId);
       invoice.status = 'paid';
       invoicesStore.set(invoiceId, invoice);

@@ -24,8 +24,30 @@ export const PaymentCheckoutModal: React.FC<PaymentCheckoutModalProps> = ({
     setStep('instructions');
   };
 
-  const handleFinalizePayment = () => {
+  const handleFinalizePayment = async () => {
     setIsProcessing(true);
+    try {
+      const res = await fetch('/api/v1/payment/create-invoice', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ planId: plan.id, method: 'platega' }),
+      });
+      const data = await res.json();
+      
+      if (data.success && data.invoice) {
+        if (data.invoice.plategaUrl) {
+           window.location.href = data.invoice.plategaUrl;
+           return;
+        } else if (data.invoice.cardlinkUrl) {
+           window.location.href = data.invoice.cardlinkUrl;
+           return;
+        }
+      }
+    } catch (e) {
+      console.error(e);
+    }
+    
+    // Fallback if APIs are not configured
     setTimeout(() => {
       setIsProcessing(false);
       onConfirmPayment(plan, 'sbp');
