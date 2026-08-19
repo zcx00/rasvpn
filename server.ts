@@ -490,7 +490,7 @@ if (process.env.TELEGRAM_BOT_TOKEN) {
     // Platega API integration
     if (paymentSettings.plategaMerchantId && paymentSettings.plategaApiKey) {
       try {
-        const plategaRes = await fetch('https://app.platega.io/transaction/process', {
+        const plategaRes = await fetch('https://app.platega.io/v2/transaction/process', {
           method: 'POST',
           headers: {
             'X-MerchantId': paymentSettings.plategaMerchantId,
@@ -498,17 +498,14 @@ if (process.env.TELEGRAM_BOT_TOKEN) {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            paymentMethod: 1, // Default method
-            id: invoiceId,
             paymentDetails: {
                 amount: amountRub,
                 currency: 'RUB'
             },
             description: `Подписка RAS VPN: ${plan.name} (${plan.durationDays} дней)`,
             return: `${appUrl}/?payment=success`,
-            returnUrl: `${appUrl}/?payment=success`,
             failedUrl: `${appUrl}/?payment=failed`,
-            payload: `invoice=${invoiceId}`
+            payload: invoiceId,
           }),
         });
         const plategaData = await plategaRes.json();

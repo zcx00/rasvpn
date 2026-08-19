@@ -353,6 +353,28 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
               <p className="text-[11px] text-slate-400">
                 Прием банковских карт РФ, СБП.
               </p>
+              
+              <div className="bg-slate-900 border border-slate-800 rounded-lg p-3 my-2">
+                <label className="text-[11px] font-bold text-slate-300 block mb-1">Callback URL (Webhook)</label>
+                <p className="text-[10px] text-slate-400 mb-2 leading-relaxed">
+                  Скопируйте этот URL и вставьте его в поле "Callback URL" в настройках магазина Platega.io, чтобы зачисления происходили автоматически.
+                </p>
+                <div className="flex items-center justify-between bg-black/40 border border-slate-800 rounded px-2.5 py-1.5">
+                   <code className="text-[10px] text-emerald-400 font-mono truncate">{window.location.origin}/api/v1/payment/webhook</code>
+                   <button 
+                     type="button"
+                     onClick={(e) => {
+                       e.preventDefault();
+                       navigator.clipboard.writeText(`${window.location.origin}/api/v1/payment/webhook`);
+                       alert('URL скопирован!');
+                     }}
+                     className="ml-2 text-cyan-400 hover:text-cyan-300 text-[10px] font-bold shrink-0"
+                   >
+                     Скопировать
+                   </button>
+                </div>
+              </div>
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
                 <div>
                   <label className="text-[11px] text-slate-400 mb-1 block">Platega Merchant ID (ID мерчанта)</label>
