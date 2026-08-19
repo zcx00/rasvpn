@@ -1,6 +1,7 @@
 import dotenv from 'dotenv';
 dotenv.config();
 import fs from "fs";
+import crypto from "crypto";
 import express from 'express';
 import TelegramBotPkg from 'node-telegram-bot-api';
 const TelegramBot = (TelegramBotPkg as any).default || (TelegramBotPkg as any).TelegramBot || TelegramBotPkg;
@@ -476,8 +477,8 @@ if (process.env.TELEGRAM_BOT_TOKEN) {
     const { planId, method } = req.body;
     const plan = TARIFF_PLANS.find(p => p.id === planId) || TARIFF_PLANS[1];
 
-    const invoiceId = `INV-${Date.now().toString().slice(-6)}`;
-    const memoCode = `RAS-${invoiceId}`;
+    const invoiceId = crypto.randomUUID();
+    const memoCode = `RAS-${invoiceId.split('-')[0]}`;
     const amountRub = plan.priceRub;
 
     let plategaUrl = '';
@@ -510,10 +511,17 @@ if (process.env.TELEGRAM_BOT_TOKEN) {
           plategaUrl = plategaData.redirect;
         } else if (plategaData?.url) {
           plategaUrl = plategaData.url;
+        } else if (plategaData?.message) {
+          return res.status(400).json({ success: false, error: `Platega API Error: ${plategaData.message}` });
+        } else {
+          return res.status(400).json({ success: false, error: `Platega API Error: Неизвестная ошибка` });
         }
-      } catch (err) {
+      } catch (err: any) {
         console.warn('Platega API call fallback:', err);
+        return res.status(500).json({ success: false, error: `Internal Server Error: ${err.message}` });
       }
+    } else {
+        return res.status(400).json({ success: false, error: 'В админ-панели не настроены ключи Platega.io' });
     }
 
     const now = new Date();

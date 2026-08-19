@@ -29,19 +29,19 @@ export const PaymentCheckoutModal: React.FC<PaymentCheckoutModalProps> = ({
       });
       const data = await res.json();
       
-      if (data.success && data.invoice && data.invoice.plategaUrl) {
+      if (res.ok && data.success && data.invoice && data.invoice.plategaUrl) {
          window.location.href = data.invoice.plategaUrl;
          return;
+      } else {
+         alert(`Ошибка создания счета: ${data.error || 'Не удалось получить ссылку на оплату'}`);
+         setIsProcessing(false);
+         return;
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
-    }
-    
-    // Fallback if APIs are not configured
-    setTimeout(() => {
+      alert(`Сетевая ошибка: ${e.message}`);
       setIsProcessing(false);
-      onConfirmPayment(plan, 'platega');
-    }, 1200);
+    }
   };
 
   const handleCloseModal = () => {
