@@ -55,7 +55,12 @@ if (process.env.TELEGRAM_BOT_TOKEN) {
 "Нажмите кнопку «💬 Поддержка» ниже.\n\n" +
 "Кодовое слово для банка: plat chek";
 
-      const appHost = webAppUrl.replace(/\/$/, '');
+      // Force the URL to use the public preview domain instead of the protected dev domain
+      let appHost = webAppUrl.replace(/\/$/, '');
+      if (appHost.includes('ais-dev-')) {
+        appHost = appHost.replace('ais-dev-', 'ais-pre-');
+      }
+
       const baseDomain = process.env.BASE_DOMAIN || 'https://sub.rasvpna.ru'; // fallback for legal links
       const options = {
         reply_markup: {
@@ -69,6 +74,20 @@ if (process.env.TELEGRAM_BOT_TOKEN) {
         }
       };
       
+      // Автоматически устанавливаем кнопку "Menu" слева внизу
+      try {
+        bot.setChatMenuButton({
+          chat_id: chatId,
+          menu_button: {
+            type: 'web_app',
+            text: 'Открыть VPN',
+            web_app: { url: appHost }
+          }
+        });
+      } catch (err) {
+        console.error('Failed to set menu button:', err);
+      }
+
       bot.sendMessage(chatId, welcomeText, options);
     });
     
