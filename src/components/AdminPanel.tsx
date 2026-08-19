@@ -36,15 +36,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
 
   // Payment Settings State
-  const [cardlinkShopId, setCardlinkShopId] = useState('');
-  const [cardlinkApiKey, setCardlinkApiKey] = useState('');
-  const [cryptoBotToken, setCryptoBotToken] = useState('');
   const [plategaMerchantId, setPlategaMerchantId] = useState('');
   const [plategaApiKey, setPlategaApiKey] = useState('');
-  const [walletTrc20, setWalletTrc20] = useState('TQn9Y2khEsLJW1ChV3o4e94J84k9L0m1aX');
-  const [walletTon, setWalletTon] = useState('EQD12aX9vK8z_ExampleTonAddressForRASVPN');
-  const [alfaAccount, setAlfaAccount] = useState('40817810505901273664');
-  const [alfaRecipient, setAlfaRecipient] = useState('Баймурзаева Нурьяна Мурадовна');
   const [isSavingPayment, setIsSavingPayment] = useState(false);
   const [paymentNotice, setPaymentNotice] = useState<string | null>(null);
 
@@ -167,12 +160,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
       const res = await fetch('/api/v1/payment/settings');
       const data = await res.json();
       if (data) {
-        if (data.cardlinkShopId) setCardlinkShopId(data.cardlinkShopId);
         if (data.plategaMerchantId) setPlategaMerchantId(data.plategaMerchantId);
-        if (data.walletTrc20) setWalletTrc20(data.walletTrc20);
-        if (data.walletTon) setWalletTon(data.walletTon);
-        if (data.alfaAccount) setAlfaAccount(data.alfaAccount);
-        if (data.alfaRecipient) setAlfaRecipient(data.alfaRecipient);
       }
     } catch (err) {
       console.error(err);
@@ -187,15 +175,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          cardlinkShopId,
-          cardlinkApiKey,
-          cryptoBotToken,
           plategaMerchantId,
           plategaApiKey,
-          walletTrc20,
-          walletTon,
-          alfaAccount,
-          alfaRecipient,
         }),
       });
       const data = await res.json();
@@ -354,48 +335,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
           )}
 
           <form onSubmit={handleSavePaymentSettings} className="space-y-4">
-            {/* Cardlink Payment Gateway Integration */}
-            <div className="bg-slate-950 p-4 rounded-xl border border-blue-500/30 space-y-3">
-              <div className="flex items-center justify-between">
-                <label className="text-xs font-bold text-white flex items-center gap-1.5">
-                  <span>💳 Платежный эквайринг Cardlink (https://cardlink.link)</span>
-                </label>
-                <a
-                  href="https://cardlink.link"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-[11px] text-cyan-400 hover:underline flex items-center gap-1"
-                >
-                  Личный кабинет Cardlink ➔
-                </a>
-              </div>
-              <p className="text-[11px] text-slate-400">
-                Прием банковских карт (РФ, СБП, Visa/Mastercard, Мир, Криптовалюта). Автоматическое перенаправление клиентов на форму оплаты Cardlink.
-              </p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                <div>
-                  <label className="text-[11px] text-slate-400 mb-1 block">Cardlink Shop ID (Идентификатор магазина)</label>
-                  <input
-                    type="text"
-                    placeholder="Например: 12948"
-                    value={cardlinkShopId}
-                    onChange={e => setCardlinkShopId(e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-800 rounded-lg p-2.5 text-xs text-white font-mono focus:border-cyan-500 outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="text-[11px] text-slate-400 mb-1 block">Cardlink API Secret Key (Секретный ключ)</label>
-                  <input
-                    type="password"
-                    placeholder="Ваш секретный API ключ Cardlink"
-                    value={cardlinkApiKey}
-                    onChange={e => setCardlinkApiKey(e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-800 rounded-lg p-2.5 text-xs text-white font-mono focus:border-cyan-500 outline-none"
-                  />
-                </div>
-              </div>
-            </div>
-
             {/* Platega.io API Integration */}
             <div className="bg-slate-950 p-4 rounded-xl border border-blue-500/30 space-y-3">
               <div className="flex items-center justify-between">
@@ -433,89 +372,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                     value={plategaApiKey}
                     onChange={e => setPlategaApiKey(e.target.value)}
                     className="w-full bg-slate-900 border border-slate-800 rounded-lg p-2.5 text-xs text-white font-mono focus:border-cyan-500 outline-none"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Telegram CryptoBot Token */}
-            <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2">
-              <div className="flex items-center justify-between">
-                <label className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
-                  <span>🤖 Telegram @CryptoBot API Token (CryptoPay)</span>
-                </label>
-                <a
-                  href="https://t.me/CryptoBot"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-[11px] text-cyan-400 hover:underline"
-                >
-                  Получить токен в @CryptoBot ➔
-                </a>
-              </div>
-              <input
-                type="text"
-                placeholder="Например: 104928:AAFd83920193810293810"
-                value={cryptoBotToken}
-                onChange={e => setCryptoBotToken(e.target.value)}
-                className="w-full bg-slate-900 border border-slate-800 rounded-lg p-2.5 text-xs text-white font-mono focus:border-cyan-500 outline-none"
-              />
-              <p className="text-[11px] text-slate-400">
-                Оплата покупателей зачисляется мгновенно на ваш баланс в Telegram @CryptoBot без комиссии сервиса!
-              </p>
-            </div>
-
-            {/* Direct USDT TRC-20 Wallet */}
-            <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2">
-              <label className="text-xs font-bold text-slate-200 block">
-                🪙 Ваш личный USDT TRC-20 Кошелек (Tron Network)
-              </label>
-              <input
-                type="text"
-                placeholder="TQn9Y2khEsLJW1ChV3o4e94J84k9L0m1aX"
-                value={walletTrc20}
-                onChange={e => setWalletTrc20(e.target.value)}
-                className="w-full bg-slate-900 border border-slate-800 rounded-lg p-2.5 text-xs text-cyan-300 font-mono focus:border-cyan-500 outline-none"
-              />
-              <p className="text-[11px] text-slate-400">
-                Сюда будут отправлять прямые переводы пользователи Trust Wallet, OKX, Binance и др.
-              </p>
-            </div>
-
-            {/* Direct TON Wallet */}
-            <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2">
-              <label className="text-xs font-bold text-slate-200 block">
-                💎 Ваш личный TON Кошелек (Tonkeeper / Telegram Wallet)
-              </label>
-              <input
-                type="text"
-                placeholder="EQD12aX9vK8z_ExampleTonAddressForRASVPN"
-                value={walletTon}
-                onChange={e => setWalletTon(e.target.value)}
-                className="w-full bg-slate-900 border border-slate-800 rounded-lg p-2.5 text-xs text-cyan-300 font-mono focus:border-cyan-500 outline-none"
-              />
-            </div>
-
-            {/* Alfa-Bank Requisites */}
-            <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-3">
-              <div className="text-xs font-bold text-slate-200">🏦 Реквизиты Альфа-Банка для рублевых переводов</div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="text-[11px] text-slate-400 mb-1 block">ФИО Получателя</label>
-                  <input
-                    type="text"
-                    value={alfaRecipient}
-                    onChange={e => setAlfaRecipient(e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-800 rounded-lg p-2 text-xs text-white"
-                  />
-                </div>
-                <div>
-                  <label className="text-[11px] text-slate-400 mb-1 block">Номер счёта</label>
-                  <input
-                    type="text"
-                    value={alfaAccount}
-                    onChange={e => setAlfaAccount(e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-800 rounded-lg p-2 text-xs text-cyan-300 font-mono"
                   />
                 </div>
               </div>

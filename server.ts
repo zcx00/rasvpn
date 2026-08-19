@@ -78,17 +78,10 @@ if (process.env.TELEGRAM_BOT_TOKEN) {
 }
 
 
-  // Payment settings store (Personal Wallet + CryptoBot + Cardlink configuration)
+  // Payment settings store (Platega configuration)
   let paymentSettings = {
-    cardlinkShopId: process.env.CARDLINK_SHOP_ID || '',
-    cardlinkApiKey: process.env.CARDLINK_API_KEY || '',
-    cryptoBotToken: process.env.CRYPTOBOT_API_TOKEN || '',
     plategaMerchantId: process.env.PLATEGA_MERCHANT_ID || '2b4657e8-0b0c-45c1-aa8c-886439001ac2',
     plategaApiKey: process.env.PLATEGA_API_KEY || '',
-    walletTrc20: process.env.MERCHANT_WALLET_TRC20 || 'TQn9Y2khEsLJW1ChV3o4e94J84k9L0m1aX',
-    walletTon: process.env.MERCHANT_WALLET_TON || 'EQD12aX9vK8z_ExampleTonAddressForRASVPN',
-    alfaAccount: process.env.ALFA_ACCOUNT_NUM || '40817810505901273664',
-    alfaRecipient: 'Баймурзаева Нурьяна Мурадовна',
     autoActivateOnPayment: true,
   };
 
@@ -460,39 +453,25 @@ if (process.env.TELEGRAM_BOT_TOKEN) {
   // Get Payment Public Settings
   app.get('/api/v1/payment/settings', (req, res) => {
       res.json({
-      cardlinkShopId: paymentSettings.cardlinkShopId,
-      hasCardlink: Boolean(paymentSettings.cardlinkShopId && paymentSettings.cardlinkApiKey),
       plategaMerchantId: paymentSettings.plategaMerchantId,
       hasPlatega: Boolean(paymentSettings.plategaMerchantId && paymentSettings.plategaApiKey),
-      walletTrc20: paymentSettings.walletTrc20,
-      walletTon: paymentSettings.walletTon,
-      alfaAccount: paymentSettings.alfaAccount,
-      alfaRecipient: paymentSettings.alfaRecipient,
-      hasCryptoBotToken: Boolean(paymentSettings.cryptoBotToken),
     });
   });
 
   // Update Admin Payment Settings
   app.post('/api/v1/admin/payment-settings', (req, res) => {
-    const { cardlinkShopId, cardlinkApiKey, cryptoBotToken, plategaMerchantId, plategaApiKey, walletTrc20, walletTon, alfaAccount, alfaRecipient } = req.body;
-    if (cardlinkShopId !== undefined) paymentSettings.cardlinkShopId = cardlinkShopId;
-    if (cardlinkApiKey !== undefined) paymentSettings.cardlinkApiKey = cardlinkApiKey;
-    if (cryptoBotToken !== undefined) paymentSettings.cryptoBotToken = cryptoBotToken;
+    const { plategaMerchantId, plategaApiKey } = req.body;
     if (plategaMerchantId !== undefined) paymentSettings.plategaMerchantId = plategaMerchantId;
     if (plategaApiKey !== undefined) paymentSettings.plategaApiKey = plategaApiKey;
-    if (walletTrc20 !== undefined) paymentSettings.walletTrc20 = walletTrc20;
-    if (walletTon !== undefined) paymentSettings.walletTon = walletTon;
-    if (alfaAccount !== undefined) paymentSettings.alfaAccount = alfaAccount;
-    if (alfaRecipient !== undefined) paymentSettings.alfaRecipient = alfaRecipient;
 
       res.json({
       success: true,
-      message: '⚙️ Настройки Cardlink, платежей и кошельков сохранены!',
+      message: '⚙️ Настройки платежей сохранены!',
       settings: paymentSettings,
     });
   });
 
-  // Create Crypto, Cardlink, Platega or Direct Invoice
+  // Create Platega Invoice
   app.post('/api/v1/payment/create-invoice', async (req, res) => {
     const { planId, method } = req.body;
     const plan = TARIFF_PLANS.find(p => p.id === planId) || TARIFF_PLANS[1];
@@ -500,95 +479,40 @@ if (process.env.TELEGRAM_BOT_TOKEN) {
     const invoiceId = `INV-${Date.now().toString().slice(-6)}`;
     const memoCode = `RAS-${invoiceId}`;
     const amountRub = plan.priceRub;
-    const amountUsdt = parseFloat((amountRub / 95).toFixed(2));
-    const amountTon = parseFloat((amountRub / 500).toFixed(2));
 
-    let payUrl = `https://t.me/CryptoBot?start=pay_${invoiceId}`;
-    let cardlinkUrl = paymentSettings.cardlinkShopId
-      ? `https://cardlink.link/bill/create?shop_id=${paymentSettings.cardlinkShopId}&amount=${amountRub}&order_id=${invoiceId}`
-      : `https://cardlink.link/bill/${invoiceId}`;
     let plategaUrl = '';
 
     // Platega API integration
     if (paymentSettings.plategaMerchantId && paymentSettings.plategaApiKey) {
       try {
-        const plategaRes = await fetch('https://api.platega.io/v1/payments', {
+        const plategaRes = await fetch('https://app.platega.io/transaction/process', {
           method: 'POST',
           headers: {
-            'X-API-KEY': paymentSettings.plategaApiKey,
+            'X-MerchantId': paymentSettings.plategaMerchantId,
+            'X-Secret': paymentSettings.plategaApiKey,
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            merchantId: paymentSettings.plategaMerchantId,
-            amount: amountRub,
-            currency: 'RUB',
-            orderId: invoiceId,
+            paymentMethod: 1, // Default method
+            id: invoiceId,
+            paymentDetails: {
+                amount: amountRub,
+                currency: 'RUB'
+            },
             description: `Подписка RAS VPN: ${plan.name} (${plan.durationDays} дней)`,
-            successUrl: `${process.env.APP_URL || ''}/?payment=success`,
-            failUrl: `${process.env.APP_URL || ''}/?payment=failed`,
+            return: `${process.env.APP_URL || ''}/?payment=success`,
+            failedUrl: `${process.env.APP_URL || ''}/?payment=failed`,
           }),
         });
         const plategaData = await plategaRes.json();
-        if (plategaData?.url) {
+        
+        if (plategaData?.redirect) {
+          plategaUrl = plategaData.redirect;
+        } else if (plategaData?.url) {
           plategaUrl = plategaData.url;
         }
       } catch (err) {
         console.warn('Platega API call fallback:', err);
-      }
-    }
-
-    // If real Cardlink API key & shop_id provided, create bill via Cardlink REST API
-    if (paymentSettings.cardlinkShopId && paymentSettings.cardlinkApiKey) {
-      try {
-        const cardlinkRes = await fetch('https://cardlink.link/api/v1/bill/create', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${paymentSettings.cardlinkApiKey}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            shop_id: paymentSettings.cardlinkShopId,
-            amount: amountRub,
-            currency: 'RUB',
-            order_id: invoiceId,
-            description: `Подписка RAS VPN: ${plan.name} (${plan.durationDays} дней)`,
-            success_url: `${process.env.APP_URL || ''}/?payment=success`,
-            fail_url: `${process.env.APP_URL || ''}/?payment=failed`,
-          }),
-        });
-        const cardlinkData = await cardlinkRes.json();
-        if (cardlinkData?.link_page_url) {
-          cardlinkUrl = cardlinkData.link_page_url;
-        } else if (cardlinkData?.data?.link_page_url) {
-          cardlinkUrl = cardlinkData.data.link_page_url;
-        }
-      } catch (err) {
-        console.warn('Cardlink API call fallback:', err);
-      }
-    }
-
-    // If real CryptoBot API token is provided, try creating real CryptoPay Invoice
-    if (paymentSettings.cryptoBotToken) {
-      try {
-        const cryptoBotRes = await fetch('https://pay.crypt.bot/api/createInvoice', {
-          method: 'POST',
-          headers: {
-            'Crypto-Pay-API-Token': paymentSettings.cryptoBotToken,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            asset: 'USDT',
-            amount: amountUsdt.toString(),
-            description: `Подписка RAS VPN: ${plan.name} (${plan.durationDays} дней)`,
-            payload: invoiceId,
-          }),
-        });
-        const cryptoData = await cryptoBotRes.json();
-        if (cryptoData?.ok && cryptoData?.result?.pay_url) {
-          payUrl = cryptoData.result.pay_url;
-        }
-      } catch (err) {
-        console.warn('CryptoBot API call fallback:', err);
       }
     }
 
@@ -601,13 +525,7 @@ if (process.env.TELEGRAM_BOT_TOKEN) {
       planName: plan.name,
       durationDays: plan.durationDays,
       amountRub,
-      amountUsdt,
-      amountTon,
-      payUrl,
-      cardlinkUrl,
       plategaUrl,
-      walletTrc20: paymentSettings.walletTrc20,
-      walletTon: paymentSettings.walletTon,
       memoCode,
       status: 'pending',
       createdAt: now.toISOString(),
@@ -711,7 +629,7 @@ if (process.env.TELEGRAM_BOT_TOKEN) {
       }
     }
 
-      res.json({
+    res.json({ success: true });
   });
 
   // Claim or Simulate Referral Bonus (+15 days)
@@ -774,7 +692,6 @@ if (process.env.TELEGRAM_BOT_TOKEN) {
 
   // Admin: Get / Create / Update Nodes
   app.get("/api/v1/admin/nodes", (req, res) => {    res.json({ entryNodes, exitNodes });  });
-  });
 
   app.post('/api/v1/admin/nodes', (req, res) => {
     const { type, node } = req.body;
