@@ -481,6 +481,10 @@ if (process.env.TELEGRAM_BOT_TOKEN) {
     const memoCode = `RAS-${invoiceId.split('-')[0]}`;
     const amountRub = plan.priceRub;
 
+    const host = req.get('host') || 'localhost:3000';
+    const protocol = req.protocol || 'https';
+    const appUrl = `${protocol}://${host}`;
+
     let plategaUrl = '';
 
     // Platega API integration
@@ -501,8 +505,10 @@ if (process.env.TELEGRAM_BOT_TOKEN) {
                 currency: 'RUB'
             },
             description: `Подписка RAS VPN: ${plan.name} (${plan.durationDays} дней)`,
-            return: `${process.env.APP_URL || ''}/?payment=success`,
-            failedUrl: `${process.env.APP_URL || ''}/?payment=failed`,
+            return: `${appUrl}/?payment=success`,
+            returnUrl: `${appUrl}/?payment=success`,
+            failedUrl: `${appUrl}/?payment=failed`,
+            payload: `invoice=${invoiceId}`
           }),
         });
         const plategaData = await plategaRes.json();
